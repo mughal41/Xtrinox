@@ -585,7 +585,29 @@ function App() {
             </div>
           )}
         </section>
+
+        <footer className="mt-10 flex flex-col items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-slate-600">
+          <div className="flex items-center gap-4">
+            <span className="flex items-center gap-1">
+              <span className="h-1 w-1 rounded-full bg-slate-700" />
+              Client: v{extensionVersion || '0.0.0'}
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="h-1 w-1 rounded-full bg-slate-700" />
+              Server: v{latestVersion || '0.0.0'}
+            </span>
+          </div>
+          <a 
+            href={VERSION_URL} 
+            target="_blank" 
+            rel="noreferrer"
+            className="hover:text-cyan-500/50 transition-colors"
+          >
+            Verify Integrity Protocol
+          </a>
+        </footer>
       </main>
+
 
     </div>
   );
