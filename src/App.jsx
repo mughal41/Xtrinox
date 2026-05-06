@@ -25,8 +25,10 @@ function App() {
   const [bridgeConnected, setBridgeConnected] = useState(false);
   const [extensionStatus, setExtensionStatus] = useState('disconnected'); // 'disconnected', 'connected', 'conflict'
   const [extensionVersion, setExtensionVersion] = useState(null);
-  const LATEST_VERSION = '1.0.0'; // Manually update this when you release a new version
+  const [latestVersion, setLatestVersion] = useState(null);
   const DOWNLOAD_URL = 'https://mughal41.github.io/Xtrinox/xtrinox-bridge.zip';
+  const VERSION_URL = 'https://mughal41.github.io/Xtrinox/version.json';
+
 
 
 
@@ -54,6 +56,22 @@ function App() {
 
     return () => unsubscribe();
   }, []);
+
+  useEffect(() => {
+    const fetchLatestVersion = async () => {
+      try {
+        const response = await fetch(VERSION_URL);
+        const data = await response.json();
+        if (data.version) {
+          setLatestVersion(data.version);
+        }
+      } catch (error) {
+        console.error('Failed to fetch latest version:', error);
+      }
+    };
+    fetchLatestVersion();
+  }, []);
+
 
   useEffect(() => {
     const pendingRequests = pendingBridgeRequestsRef.current;
@@ -138,7 +156,7 @@ function App() {
   const extensionStatusLabel = 
     extensionStatus === 'conflict' ? 'Extension Conflict Detected' :
     extensionAvailable 
-      ? (extensionVersion && extensionVersion !== LATEST_VERSION ? 'Update Available' : 'Extension Connected')
+      ? (extensionVersion && latestVersion && extensionVersion !== latestVersion ? 'Update Available' : 'Extension Connected')
       : 'Extension Not Detected';
 
 
@@ -440,14 +458,14 @@ function App() {
                 </div>
               </div>
             </div>
-          ) : extensionVersion && extensionVersion !== LATEST_VERSION ? (
+          ) : extensionVersion && latestVersion && extensionVersion !== latestVersion ? (
             <div className="mx-auto flex max-w-lg flex-col items-center justify-center py-10 text-center">
               <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-3xl bg-indigo-500/10 text-indigo-400 shadow-[0_0_20px_rgba(99,102,241,0.1)]">
                 <span className="material-symbols-outlined text-4xl">update</span>
               </div>
               <h2 className="text-2xl font-semibold text-slate-100">Update Available</h2>
               <p className="mt-3 text-slate-400">
-                A new version of **Xtrinox Bridge** is available (v{LATEST_VERSION}). Please update to continue using premium features.
+                A new version of **Xtrinox Bridge** is available (v{latestVersion}). Please update to continue using premium features.
               </p>
               <div className="mt-8 w-full">
                 <a
@@ -455,7 +473,7 @@ function App() {
                   className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-cyan-400 to-indigo-500 px-6 py-4 font-semibold text-slate-950 transition hover:brightness-110"
                 >
                   <span className="material-symbols-outlined">download_for_offline</span>
-                  Download v{LATEST_VERSION}
+                  Download v{latestVersion}
                 </a>
                 <p className="mt-4 text-xs text-slate-500">
                   Current Version: v{extensionVersion}
