@@ -61,6 +61,7 @@ function App() {
     const fetchLatestVersion = async () => {
       try {
         const response = await fetch(VERSION_URL);
+        if (!response.ok) return;
         const data = await response.json();
         if (data.version) {
           setLatestVersion(data.version);
@@ -69,8 +70,12 @@ function App() {
         console.error('Failed to fetch latest version:', error);
       }
     };
+    
     fetchLatestVersion();
+    const interval = setInterval(fetchLatestVersion, 30000); // Check every 30 seconds
+    return () => clearInterval(interval);
   }, []);
+
 
 
   useEffect(() => {
