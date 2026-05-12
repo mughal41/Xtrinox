@@ -16,7 +16,6 @@ import {
   Search, 
   ShieldAlert, 
   ShieldCheck, 
-  UserMinus, 
   Key,
   MoreVertical,
   Mail,
@@ -25,7 +24,7 @@ import {
   Plus,
   X
 } from 'lucide-react';
-import { adminUserService, adminEntitlementService } from '../../services/admin.service';
+import { adminUserService, adminEntitlementService, adminProductCookieService } from '../../services/admin.service';
 import { useAuthStore } from '../../state/useAuthStore';
 import { useRuntimeStore } from '../../state/useRuntimeStore';
 
@@ -375,12 +374,19 @@ const DetailsModal = ({ user, onClose }: any) => {
   const [data, setData] = useState<any>({ subs: [], history: [], availableTools: [], devices: [] });
   const [loading, setLoading] = useState(true);
   const [isAssigning, setIsAssigning] = useState(false);
-  const [newAssignment, setNewAssignment] = useState({ toolId: '', days: 30 });
+  const [newAssignment, setNewAssignment] = useState({ toolId: '', cookieId: '', days: 30 });
 
   const { user: currentAdmin } = useAuthStore();
 
-  useEffect(() => {
-    const fetchData = async () => {
+  const cookieSetsForTool = data.productCookies?.filter((cookie: any) => (
+    cookie.marketplaceToolId === newAssignment.toolId && cookie.active !== false
+  )) || [];
+
+  const selectedCookieSet = data.productCookies?.find((cookie: any) => cookie.id === newAssignment.cookieId);
+
+  const loadDetails = async () => {
+    setLoading(true);
+    try {
       // 1. Fetch Entitlements
       const entitlementsSnap = await getDocs(query(collection(db, 'entitlements'), where('userId', '==', user.id)));
       
@@ -389,6 +395,7 @@ const DetailsModal = ({ user, onClose }: any) => {
       
       // 3. Fetch Available Tools for dropdown
       const toolsSnap = await getDocs(collection(db, 'marketplace_tools'));
+      const productCookies = await adminProductCookieService.getAllProductCookies();
       
       const subs = entitlementsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
       if (subDoc.exists()) {
@@ -407,22 +414,59 @@ const DetailsModal = ({ user, onClose }: any) => {
         subs,
         history: historySnap.docs.map(d => ({ id: d.id, ...d.data() })),
         availableTools: toolsSnap.docs.map(d => ({ id: d.id, ...d.data() })),
+        productCookies,
         devices: devicesSnap.docs.map(d => d.data())
       });
+    } finally {
       setLoading(false);
-    };
-    fetchData();
+    }
+  };
+
+  useEffect(() => {
+    loadDetails();
   }, [user]);
+
+  useEffect(() => {
+    if (!newAssignment.toolId) return;
+    const firstCookie = (data.productCookies || []).find((cookie: any) => (
+      cookie.marketplaceToolId === newAssignment.toolId && cookie.active !== false
+    ));
+    setNewAssignment(prev => ({
+      ...prev,
+      cookieId: firstCookie?.id || '',
+    }));
+  }, [newAssignment.toolId, data.productCookies]);
 
   const handleGrant = async () => {
     if (!newAssignment.toolId) return alert('Select a tool first');
+    if (!selectedCookieSet) return alert('Select a cookie set for this tool first');
     setLoading(true);
     try {
-      await adminEntitlementService.grantAccess(user.id, newAssignment.toolId, newAssignment.days, currentAdmin?.uid || 'admin');
+      await adminEntitlementService.grantAccess(
+        user.id,
+        newAssignment.toolId,
+        newAssignment.days,
+        currentAdmin?.uid || 'admin',
+        selectedCookieSet
+      );
       alert('Access granted successfully.');
-      onClose();
+      setIsAssigning(false);
+      await loadDetails();
     } catch (e: any) {
       alert('Failed: ' + e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRevoke = async (toolId: string) => {
+    if (!confirm(`Revoke access to ${toolId} for this user?`)) return;
+    setLoading(true);
+    try {
+      await adminEntitlementService.revokeAccess(user.id, toolId, currentAdmin?.uid || 'admin');
+      await loadDetails();
+    } catch (e: any) {
+      alert('Failed to revoke: ' + e.message);
     } finally {
       setLoading(false);
     }
@@ -509,20 +553,30 @@ const DetailsModal = ({ user, onClose }: any) => {
               {data.subs.length === 0 ? (
                 <p className="text-center py-8 text-slate-400 text-sm">No active subscriptions found.</p>
               ) : data.subs.map((sub: any) => (
-                <div key={sub.id} className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex justify-between items-center">
+                <div key={sub.id} className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex justify-between items-center gap-4">
                   <div>
                     <p className="font-bold text-slate-900">{sub.toolId}</p>
                     <p className="text-[10px] text-slate-500">
                       Expires: {sub.expiresAt?.toDate ? sub.expiresAt.toDate().toLocaleDateString() : 'No Expiry'}
                     </p>
                   </div>
-                  <span className={`px-2 py-1 rounded-lg text-[10px] font-bold ${
-                    sub.status === 'LEGACY' ? 'bg-amber-50 text-amber-600' : 
-                    sub.status === 'AUTO-DETECT' ? 'bg-indigo-50 text-indigo-600' :
-                    'bg-emerald-50 text-emerald-600'
-                  }`}>
-                    {sub.status || 'ACTIVE'}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className={`px-2 py-1 rounded-lg text-[10px] font-bold ${
+                      sub.status === 'LEGACY' ? 'bg-amber-50 text-amber-600' : 
+                      sub.status === 'AUTO-DETECT' ? 'bg-indigo-50 text-indigo-600' :
+                      'bg-emerald-50 text-emerald-600'
+                    }`}>
+                      {sub.status || 'ACTIVE'}
+                    </span>
+                    {!sub.status && (
+                      <button
+                        onClick={() => handleRevoke(sub.toolId)}
+                        className="px-2 py-1 rounded-lg text-[10px] font-bold bg-rose-50 text-rose-600 hover:bg-rose-100"
+                      >
+                        Revoke
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))}
               {isAssigning ? (
@@ -537,6 +591,18 @@ const DetailsModal = ({ user, onClose }: any) => {
                       <option value="">Select Tool...</option>
                       {data.availableTools.map((t: any) => (
                         <option key={t.id} value={t.id}>{t.name}</option>
+                      ))}
+                    </select>
+                    <select 
+                      className="bg-white border border-indigo-100 rounded-lg px-3 py-2 text-xs outline-none"
+                      value={newAssignment.cookieId}
+                      disabled={!newAssignment.toolId || cookieSetsForTool.length === 0}
+                      onChange={(e) => setNewAssignment({...newAssignment, cookieId: e.target.value})}
+                    >
+                      {cookieSetsForTool.length === 0 ? (
+                        <option value="">No cookie set</option>
+                      ) : cookieSetsForTool.map((cookie: any) => (
+                        <option key={cookie.id} value={cookie.id}>{cookie.title}</option>
                       ))}
                     </select>
                     <input 
@@ -556,7 +622,8 @@ const DetailsModal = ({ user, onClose }: any) => {
                     </button>
                     <button 
                       onClick={handleGrant}
-                      className="flex-1 bg-primary text-white py-2 rounded-lg text-xs font-bold"
+                      disabled={!newAssignment.toolId || !newAssignment.cookieId}
+                      className="flex-1 bg-primary text-white py-2 rounded-lg text-xs font-bold disabled:opacity-50"
                     >
                       Confirm Grant
                     </button>

@@ -14,13 +14,13 @@ export const MainLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
   const { user } = useAuthStore();
   const { extensionStatus, extensionVersion, latestVersion } = useRuntimeStore();
   const location = useLocation();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const handleLogout = async () => {
     try {
       await auth.signOut();
     } catch (err) {
-      console.error('Logout failed:', err);
+      // Firebase auth state will remain unchanged if logout fails.
     }
   };
 
@@ -97,19 +97,19 @@ export const MainLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
 
             {/* Mobile Hamburger Button */}
             <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               className="md:hidden flex items-center justify-center p-2 rounded-lg text-on-surface-variant hover:bg-surface-container-low transition-colors"
               aria-label="Toggle menu"
             >
               <span className="material-symbols-outlined" style={{ fontSize: '28px' }}>
-                {mobileMenuOpen ? 'close' : 'menu'}
+                {isMobileMenuOpen ? 'close' : 'menu'}
               </span>
             </button>
           </div>
         </div>
 
         {/* Mobile Navigation Drawer */}
-        {mobileMenuOpen && (
+        {isMobileMenuOpen && (
           <div className="md:hidden border-t border-outline-variant bg-surface" style={{ animation: 'slideDown 0.2s ease-out' }}>
             <style dangerouslySetInnerHTML={{ __html: `
               @keyframes slideDown {
@@ -122,7 +122,7 @@ export const MainLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
                 <Link
                   key={item.path}
                   to={item.path}
-                  onClick={() => setMobileMenuOpen(false)}
+                  onClick={() => setIsMobileMenuOpen(false)}
                   className={cn(
                     "flex items-center gap-3 transition-colors duration-200",
                     location.pathname === item.path
@@ -165,7 +165,7 @@ export const MainLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
                     </div>
                   </div>
                   <button 
-                    onClick={() => { handleLogout(); setMobileMenuOpen(false); }}
+                    onClick={() => { handleLogout(); setIsMobileMenuOpen(false); }}
                     className="flex items-center gap-2 text-on-surface-variant hover:text-error transition-colors rounded-lg"
                     style={{ padding: '8px 12px', fontSize: '13px', fontWeight: 500 }}
                   >
@@ -176,7 +176,7 @@ export const MainLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
               ) : (
                 <Link 
                   to="/login" 
-                  onClick={() => setMobileMenuOpen(false)}
+                  onClick={() => setIsMobileMenuOpen(false)}
                   className="block text-center bg-primary text-on-primary rounded-lg font-bold shadow-sm hover:shadow active:scale-95 transition-all"
                   style={{ padding: '12px 24px', fontSize: '15px' }}
                 >

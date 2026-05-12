@@ -21,7 +21,7 @@ export const ModernRuntimeModals: React.FC = () => {
   
   const location = useLocation();
 
-  const isPromptSuppressed = 
+  const shouldSuppressModal = 
     location.pathname.includes('/marketplace') || 
     location.pathname.includes('/checkout') || 
     location.pathname.includes('/login') || 
@@ -80,7 +80,7 @@ export const ModernRuntimeModals: React.FC = () => {
     <>
       {/* 1. Workspace Connector Required Modal */}
       <ModernModal 
-        isOpen={extensionStatus === 'disconnected' && !isPromptSuppressed}
+        isOpen={extensionStatus === 'disconnected' && !shouldSuppressModal}
       >
         <div style={{ padding: '40px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
           {/* Illustration Area */}
@@ -134,7 +134,7 @@ export const ModernRuntimeModals: React.FC = () => {
 
       {/* 2. Workspace Conflict Detected Modal */}
       <ModernModal 
-        isOpen={extensionStatus === 'conflict' && !isPromptSuppressed}
+        isOpen={extensionStatus === 'conflict' && !shouldSuppressModal}
         accentColor="bg-tertiary"
       >
         <div className="p-xl flex flex-col items-center text-center">

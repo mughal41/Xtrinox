@@ -61,6 +61,16 @@ export interface Entitlement {
   createdAt: Timestamp;
 }
 
+export interface ProductCookie {
+  id: string;
+  marketplaceToolId: string;
+  title: string;
+  cookies: any[];
+  active: boolean;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
 // tool_configs: Static runtime configs for each tool
 export interface ToolConfig {
   toolId: string;

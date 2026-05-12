@@ -15,6 +15,11 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // --- PRODUCT COOKIES (Admin-only sensitive payloads) ---
+    match /product_cookies/{cookieId} {
+      allow read, write: if isAdmin();
+    }
+
     // --- SUBSCRIPTIONS ---
     // Supports both:
     //   - Legacy flow: document ID == userId (direct get)
@@ -30,7 +35,8 @@ service cloud.firestore {
     // Update/Delete: admin only
     match /entitlements/{entId} {
       allow read: if isAuthenticated();
-      allow create: if isAuthenticated() 
+      allow create: if isAdmin()
+                    || isAuthenticated() 
                     && request.resource.data.userId == request.auth.uid;
       allow update, delete: if isAdmin();
     }
@@ -47,7 +53,8 @@ service cloud.firestore {
     // Delete: admin only
     match /workspace_apps/{appId} {
       allow read: if isAuthenticated();
-      allow create: if isAuthenticated() 
+      allow create: if isAdmin()
+                    || isAuthenticated() 
                     && request.resource.data.userId == request.auth.uid;
       allow update: if isAuthenticated();
       allow delete: if isAdmin();

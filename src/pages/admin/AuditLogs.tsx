@@ -21,7 +21,7 @@ export const AuditLogs: React.FC = () => {
         const snap = await getDocs(q);
         setLogs(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       } catch (err: any) {
-        console.error('Audit Log Fetch Failed:', err);
+        setLogs([]);
       } finally {
         setLoading(false);
       }

@@ -3,6 +3,7 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, 
   Package, 
+  Cookie,
   Users, 
   Zap, 
   Settings2, 
@@ -19,6 +20,7 @@ import { auth } from '../firebase/config';
 const navItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/admin/dashboard' },
   { icon: Package, label: 'Tools Inventory', path: '/admin/tools' },
+  { icon: Cookie, label: 'Product Cookies', path: '/admin/product-cookies' },
   { icon: Users, label: 'User Directory', path: '/admin/users' },
   { icon: ShieldCheck, label: 'Entitlements', path: '/admin/entitlements' },
   { icon: Zap, label: 'Runtime Monitor', path: '/admin/runtime' },
@@ -49,7 +51,7 @@ export const AdminLayout: React.FC = () => {
     try {
       await auth.signOut();
     } catch (error) {
-      console.error('Logout failed:', error);
+      // Firebase auth state will remain unchanged if logout fails.
     }
   };
 

@@ -27,7 +27,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const { user } = get();
     if (user) {
       const tokenResult = await user.getIdTokenResult(true);
-      console.log('Admin Status Refresh:', tokenResult.claims);
       set({ isAdmin: !!tokenResult.claims.admin });
     }
   },
@@ -37,7 +36,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       let isAdmin = false;
       if (user) {
         const tokenResult = await user.getIdTokenResult();
-        console.log('Auth Initialized. Claims:', tokenResult.claims);
         isAdmin = !!tokenResult.claims.admin;
       }
       set({ user, isAdmin, loading: false, initialized: true });

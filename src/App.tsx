@@ -34,6 +34,7 @@ import { AdminDashboard } from './pages/admin/AdminDashboard';
 import { ToolManager } from './pages/admin/ToolManager';
 import { UserManager } from './pages/admin/UserManager';
 import { EntitlementWizard } from './pages/admin/EntitlementWizard';
+import { ProductCookiesPage } from './pages/admin/ProductCookiesPage';
 import { AuditLogs } from './pages/admin/AuditLogs';
 
 import { RuntimeMonitor } from './pages/admin/RuntimeMonitor';
@@ -106,6 +107,7 @@ function App() {
           <Route index element={<Navigate to="/admin/dashboard" replace />} />
           <Route path="dashboard" element={<AdminDashboard />} />
           <Route path="tools" element={<ToolManager />} />
+          <Route path="product-cookies" element={<ProductCookiesPage />} />
           <Route path="users" element={<UserManager />} />
           <Route path="entitlements" element={<EntitlementWizard />} />
           <Route path="runtime" element={<RuntimeMonitor />} />

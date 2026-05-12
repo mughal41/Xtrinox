@@ -68,12 +68,10 @@ const SEED_TOOLS = [
 ];
 
 export async function initializeMarketplace() {
-  console.log('[Init] Checking marketplace state...');
   try {
     const snap = await getDocs(collection(db, 'marketplace_tools'));
     
     if (snap.empty) {
-      console.log('[Init] Marketplace empty, seeding initial tools...');
       const batch = writeBatch(db);
       
       for (const tool of SEED_TOOLS) {
@@ -86,9 +84,6 @@ export async function initializeMarketplace() {
       }
       
       await batch.commit();
-      console.log('[Init] Marketplace seeded successfully.');
-    } else {
-      console.log('[Init] Marketplace already initialized.');
     }
     
     // Feature Flags Check
@@ -101,10 +96,9 @@ export async function initializeMarketplace() {
          newRuntimeEnabled: true,
          updatedAt: serverTimestamp()
        });
-       console.log('[Init] Feature flags initialized.');
     }
 
   } catch (e) {
-    console.error('[Init] Initialization failed:', e);
+    // Best-effort initialization; static fallbacks keep the marketplace usable.
   }
 }

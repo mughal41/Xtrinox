@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../firebase/config';
-import { useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
+import { useAuthStore } from '../state/useAuthStore';
 
 export const LoginPage: React.FC = () => {
+  const { user, loading: authLoading } = useAuthStore();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -23,6 +25,14 @@ export const LoginPage: React.FC = () => {
       setLoading(false);
     }
   };
+
+  if (authLoading) {
+    return <div className="p-20 text-center italic text-slate-400">Verifying secure access...</div>;
+  }
+
+  if (user) {
+    return <Navigate to="/workspace" replace />;
+  }
 
   return (
     <div 

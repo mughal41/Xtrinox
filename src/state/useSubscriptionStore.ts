@@ -45,7 +45,6 @@ export const useSubscriptionStore = create<SubscriptionState>((set, get) => ({
         set({ subscriptions: subs, entitlements: ents, userDoc, loading: false });
       }
     } catch (err: any) {
-      console.error('[SubscriptionStore] Fetch failed:', err);
       set({ loading: false, error: err.message });
     }
   },

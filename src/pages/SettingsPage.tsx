@@ -21,9 +21,9 @@ export const SettingsPage: React.FC = () => {
   const { user } = useAuthStore();
   const navigate = useNavigate();
 
-  // Profile
-  const [displayName, setDisplayName] = useState('');
-  const [bio, setBio] = useState('');
+  // Profile Settings
+  const [userDisplayName, setUserDisplayName] = useState('');
+  const [userBio, setUserBio] = useState('');
 
   // Password
   const [currentPassword, setCurrentPassword] = useState('');
@@ -34,16 +34,17 @@ export const SettingsPage: React.FC = () => {
   const [changingPassword, setChangingPassword] = useState(false);
 
   // Notifications
-  const [productUpdates, setProductUpdates] = useState(true);
-  const [billingAlerts, setBillingAlerts] = useState(true);
-  const [marketing, setMarketing] = useState(false);
+  const [wantsProductUpdates, setWantsProductUpdates] = useState(true);
+  const [wantsBillingAlerts, setWantsBillingAlerts] = useState(true);
+  const [wantsMarketingAlerts, setWantsMarketingAlerts] = useState(false);
 
   useEffect(() => {
     if (user) {
-      setDisplayName(user.displayName || user.email?.split('@')[0] || '');
+      setUserDisplayName(user.displayName || user.email?.split('@')[0] || '');
     }
   }, [user]);
 
+  // Handle Firebase password change with re-authentication
   const handlePasswordChange = async () => {
     setPasswordError('');
     setPasswordSuccess('');
@@ -77,6 +78,7 @@ export const SettingsPage: React.FC = () => {
     }
   };
 
+  // End all active user sessions and sign out of Firebase
   const handleLogoutAll = async () => {
     await signOut(auth);
     navigate('/login');
@@ -121,8 +123,8 @@ export const SettingsPage: React.FC = () => {
                 <input
                   className="w-full p-md bg-surface-container-low border border-transparent focus:border-primary focus:bg-surface rounded-lg text-body-md transition-all outline-none"
                   type="text"
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
+                  value={userDisplayName}
+                  onChange={(e) => setUserDisplayName(e.target.value)}
                 />
               </div>
               <div className="flex flex-col gap-xs">
@@ -141,11 +143,11 @@ export const SettingsPage: React.FC = () => {
               <textarea
                 className="w-full p-md bg-surface-container-low border border-transparent focus:border-primary focus:bg-surface rounded-lg text-body-md transition-all outline-none resize-none"
                 rows={3}
-                value={bio}
-                onChange={(e) => setBio(e.target.value)}
+                value={userBio}
+                onChange={(e) => setUserBio(e.target.value)}
                 placeholder="Brief description for your profile. Maximum 200 characters."
               />
-              <p className="text-[11px] text-on-surface-variant">{bio.length}/200 characters</p>
+              <p className="text-[11px] text-on-surface-variant">{userBio.length}/200 characters</p>
             </div>
           </div>
         </div>
@@ -248,21 +250,21 @@ export const SettingsPage: React.FC = () => {
               <p className="font-h3 text-on-surface">Product Updates</p>
               <p className="text-body-md text-on-surface-variant">Get notified about new features and ecosystem releases.</p>
             </div>
-            <Toggle enabled={productUpdates} onChange={() => setProductUpdates(!productUpdates)} />
+            <Toggle enabled={wantsProductUpdates} onChange={() => setWantsProductUpdates(!wantsProductUpdates)} />
           </div>
           <div className="flex items-center justify-between py-md border-t border-surface-container-highest">
             <div>
               <p className="font-h3 text-on-surface">Billing Alerts</p>
               <p className="text-body-md text-on-surface-variant">Monthly invoices and payment confirmation summaries.</p>
             </div>
-            <Toggle enabled={billingAlerts} onChange={() => setBillingAlerts(!billingAlerts)} />
+            <Toggle enabled={wantsBillingAlerts} onChange={() => setWantsBillingAlerts(!wantsBillingAlerts)} />
           </div>
           <div className="flex items-center justify-between py-md border-t border-surface-container-highest">
             <div>
               <p className="font-h3 text-on-surface">Marketing Communications</p>
               <p className="text-body-md text-on-surface-variant">Occasional newsletters and partner marketplace offers.</p>
             </div>
-            <Toggle enabled={marketing} onChange={() => setMarketing(!marketing)} />
+            <Toggle enabled={wantsMarketingAlerts} onChange={() => setWantsMarketingAlerts(!wantsMarketingAlerts)} />
           </div>
         </div>
       </section>

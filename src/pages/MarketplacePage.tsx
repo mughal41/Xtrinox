@@ -1,61 +1,79 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMarketplaceStore } from '../state/useMarketplaceStore';
 import { useSubscriptionStore } from '../state/useSubscriptionStore';
 import { MarketplaceTool } from '../firebase/schema';
 import { PagePreloader } from '../components/PagePreloader';
+import { getLocalizedPrice, getUserTimezone, parseUsdPrice } from '../utils/pricing';
 
-const ToolCard: React.FC<{ tool: MarketplaceTool }> = ({ tool }) => {
+const ToolCard: React.FC<{ marketplaceTool: MarketplaceTool }> = ({ marketplaceTool }) => {
   const navigate = useNavigate();
-  const isSubscribed = useSubscriptionStore((state) => state.isSubscribed(tool.id));
+  const timezone = useMemo(getUserTimezone, []);
+  const localizedPrice = useMemo(
+    () => getLocalizedPrice(parseUsdPrice(marketplaceTool.monthlyPrice), timezone),
+    [marketplaceTool.monthlyPrice, timezone]
+  );
+  const imageSrc = marketplaceTool.imageUrl || marketplaceTool.bannerUrl;
+  
+  // Check if the current user has an active subscription for this tool
+  const isSubscribed = useSubscriptionStore((state) => state.isSubscribed(marketplaceTool.id));
 
-  const handleAction = (e: React.MouseEvent) => {
+  const handleSubscriptionAction = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (isSubscribed) {
       navigate('/workspace');
     } else {
-      navigate(`/checkout/${tool.id}`);
+      navigate(`/checkout/${marketplaceTool.id}`);
     }
   };
 
   return (
     <div 
-      onClick={() => navigate(`/marketplace/${tool.id}`)}
-      className="bg-surface rounded-xl border border-surface-container-highest overflow-hidden hover:shadow-lg transition-all group flex flex-col cursor-pointer"
+      onClick={() => navigate(`/marketplace/${marketplaceTool.id}`)}
+      className="bg-surface rounded-xl border border-surface-container-highest overflow-hidden hover:shadow-lg hover:-translate-y-0.5 transition-all group flex flex-col cursor-pointer"
     >
-      <div className="h-32 bg-surface-container-high relative overflow-hidden">
-        {(tool.imageUrl || tool.bannerUrl) ? (
+      <div className="h-36 bg-white relative overflow-hidden border-b border-surface-container-low flex items-center justify-center">
+        {imageSrc ? (
           <img 
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
-            src={tool.imageUrl || tool.bannerUrl} 
-            alt={tool.name} 
+            className="w-full h-full object-contain p-5 group-hover:scale-[1.03] transition-transform duration-500" 
+            src={imageSrc} 
+            alt={marketplaceTool.name} 
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center bg-slate-100">
              <span className="material-symbols-outlined text-slate-300 text-4xl">image</span>
           </div>
         )}
-        <div className="absolute top-2 right-2">
-          <button className="w-8 h-8 rounded-full bg-white/80 backdrop-blur-sm shadow-sm flex items-center justify-center text-on-surface-variant hover:text-rose-500 transition-colors">
-            <span className="material-symbols-outlined text-[18px]">favorite</span>
-          </button>
-        </div>
+        {marketplaceTool.featured && (
+          <span className="absolute left-3 top-3 rounded-full bg-primary text-on-primary px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest shadow-sm">
+            Featured
+          </span>
+        )}
       </div>
-      <div className="p-md flex flex-col flex-grow">
-        <div className="flex gap-sm mb-xs">
-          <span className="text-label-sm text-primary font-bold uppercase">{tool.category}</span>
+      <div className="p-5 flex flex-col flex-grow min-h-[230px]">
+        <div className="flex items-center justify-between gap-3 mb-3">
+          <span className="text-[10px] text-primary font-bold uppercase tracking-widest truncate">{marketplaceTool.category}</span>
+          <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 rounded-full px-2 py-1 shrink-0">Available</span>
         </div>
-        <h4 className="font-h2 text-h2 mb-xs">{tool.name}</h4>
-        <p className="text-body-md text-on-surface-variant line-clamp-2 mb-md flex-grow">{tool.description}</p>
-        <div className="flex items-center justify-between pt-sm border-t border-surface-container-low">
-          <span className="text-h3 font-h3">{tool.monthlyPrice}</span>
+        <h4 className="font-bold text-lg leading-tight text-on-surface mb-2">{marketplaceTool.name}</h4>
+        <p className="text-sm text-on-surface-variant line-clamp-3 mb-5 flex-grow leading-relaxed">{marketplaceTool.description}</p>
+        <div className="pt-4 border-t border-surface-container-low space-y-3">
+          <div>
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-xl font-bold text-on-surface">{localizedPrice.display}</span>
+              <span className="text-xs font-semibold text-on-surface-variant">/month</span>
+            </div>
+            {localizedPrice.isConverted && (
+              <p className="text-[11px] text-on-surface-variant mt-1">Base: {localizedPrice.baseUsdDisplay}</p>
+            )}
+          </div>
           <button 
-            onClick={handleAction}
+            onClick={handleSubscriptionAction}
             className={`${
               isSubscribed 
                 ? "bg-emerald-500 text-white" 
                 : "bg-primary text-on-primary"
-            } px-md py-2 rounded-lg font-label-md text-label-md hover:brightness-110 active:scale-95 transition-all flex items-center gap-1`}
+            } w-full justify-center px-md py-2.5 rounded-lg font-label-md text-label-md hover:brightness-110 active:scale-95 transition-all flex items-center gap-1`}
           >
             {isSubscribed ? (
               <>
@@ -259,8 +277,8 @@ const SeoContentSection: React.FC = () => (
 );
 
 export const MarketplacePage: React.FC = () => {
-  const { tools, loading, fetchTools } = useMarketplaceStore();
-  const subsLoading = useSubscriptionStore((state) => state.loading);
+  const { tools: marketplaceTools, loading: isMarketplaceLoading, fetchTools } = useMarketplaceStore();
+  const isSubscriptionLoading = useSubscriptionStore((state) => state.loading);
   const [activeCategory, setActiveCategory] = useState('All');
 
   useEffect(() => {
@@ -268,16 +286,16 @@ export const MarketplacePage: React.FC = () => {
   }, [fetchTools]);
 
   // Show preloader until BOTH tools and subscriptions are ready
-  if (loading || subsLoading) return <PagePreloader message="Synchronizing marketplace inventory..." />;
+  if (isMarketplaceLoading || isSubscriptionLoading) return <PagePreloader message="Synchronizing marketplace inventory..." />;
 
   // Derive unique categories from actual Firestore tool data
-  const uniqueCategories = Array.from(new Set(tools.map(t => t.category).filter(Boolean)));
+  const uniqueCategories = Array.from(new Set(marketplaceTools.map(t => t.category).filter(Boolean)));
   const categories = ['All', ...uniqueCategories];
 
   // Filter tools by selected category
-  const filteredTools = activeCategory === 'All'
-    ? tools
-    : tools.filter(t => t.category === activeCategory);
+  const filteredMarketplaceTools = activeCategory === 'All'
+    ? marketplaceTools
+    : marketplaceTools.filter(t => t.category === activeCategory);
 
   return (
     <div className="space-y-xxl">
@@ -303,7 +321,7 @@ export const MarketplacePage: React.FC = () => {
               {cat}
               {cat !== 'All' && (
                 <span className="ml-1 opacity-60">
-                  ({tools.filter(t => t.category === cat).length})
+                  ({marketplaceTools.filter(t => t.category === cat).length})
                 </span>
               )}
             </button>
@@ -319,7 +337,7 @@ export const MarketplacePage: React.FC = () => {
             <p className="text-body-md text-on-surface-variant">
               {activeCategory === 'All' 
                 ? 'Top-tier tools verified for enterprise deployment.' 
-                : `Showing ${filteredTools.length} tool${filteredTools.length !== 1 ? 's' : ''} in ${activeCategory}`}
+                : `Showing ${filteredMarketplaceTools.length} tool${filteredMarketplaceTools.length !== 1 ? 's' : ''} in ${activeCategory}`}
             </p>
           </div>
           {activeCategory !== 'All' && (
@@ -332,11 +350,11 @@ export const MarketplacePage: React.FC = () => {
           )}
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-lg">
-          {filteredTools.map(tool => (
-            <ToolCard key={tool.id} tool={tool} />
+          {filteredMarketplaceTools.map(tool => (
+            <ToolCard key={tool.id} marketplaceTool={tool} />
           ))}
         </div>
-        {filteredTools.length === 0 && (
+        {filteredMarketplaceTools.length === 0 && (
           <div className="text-center py-xl">
             <span className="material-symbols-outlined text-on-surface-variant text-[48px] opacity-30" style={{ marginBottom: '12px', display: 'block' }}>search_off</span>
             <p className="text-on-surface-variant font-medium" style={{ fontSize: '15px' }}>No tools found in "{activeCategory}"</p>

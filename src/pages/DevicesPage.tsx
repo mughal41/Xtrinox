@@ -8,8 +8,8 @@ import { PagePreloader } from '../components/PagePreloader';
 export const DevicesPage: React.FC = () => {
   const { user } = useAuthStore();
   const { currentDeviceId } = useRuntimeStore();
-  const [devices, setDevices] = useState<Device[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [trustedDevices, setTrustedDevices] = useState<Device[]>([]);
+  const [isDevicesLoading, setIsDevicesLoading] = useState(true);
 
   useEffect(() => {
     if (user) {
@@ -20,29 +20,31 @@ export const DevicesPage: React.FC = () => {
           if (b.deviceId === currentDeviceId) return 1;
           return b.lastActiveAt?.toMillis() - a.lastActiveAt?.toMillis();
         });
-        setDevices(sorted);
-        setLoading(false);
+        setTrustedDevices(sorted);
+        setIsDevicesLoading(false);
       });
     }
   }, [user, currentDeviceId]);
 
+  // Immediately revoke device access. Restoring access requires admin approval.
   const handleBlockDevice = async (deviceId: string) => {
     if (!user) return;
     if (window.confirm("Are you sure you want to block this device? It will immediately lose access and can only be restored by an administrator.")) {
       await firestoreService.blockDevice(user.uid, deviceId, 'user');
       // Optimistic update
-      setDevices(prev => prev.map(d => d.deviceId === deviceId ? { ...d, blocked: true, blockedBy: 'user' } : d));
+      setTrustedDevices(prev => prev.map(d => d.deviceId === deviceId ? { ...d, blocked: true, blockedBy: 'user' } : d));
     }
   };
 
+  // Request an admin to restore access for a blocked device.
   const handleRequestUnblock = async (deviceId: string) => {
     if (!user) return;
     await firestoreService.requestUnblock(user.uid, deviceId);
-    setDevices(prev => prev.map(d => d.deviceId === deviceId ? { ...d, unblockRequested: true } : d));
+    setTrustedDevices(prev => prev.map(d => d.deviceId === deviceId ? { ...d, unblockRequested: true } : d));
     alert("Restoration request sent to administrator.");
   };
 
-  if (loading) return <PagePreloader message="Checking device integrity..." />;
+  if (isDevicesLoading) return <PagePreloader message="Checking device integrity..." />;
 
   return (
     <div className="space-y-xl">
@@ -58,7 +60,7 @@ export const DevicesPage: React.FC = () => {
         </div>
         
         <div className="divide-y divide-outline-variant">
-          {devices.map(device => {
+          {trustedDevices.map(device => {
             const isCurrent = device.deviceId === currentDeviceId;
             
             return (

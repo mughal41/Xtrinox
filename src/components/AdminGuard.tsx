@@ -3,11 +3,8 @@ import { Navigate } from 'react-router-dom';
 import { useAuthStore } from '../state/useAuthStore';
 import { PagePreloader } from './PagePreloader';
 
-import { useRuntimeStore } from '../state/useRuntimeStore';
-
 export const AdminGuard: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, isAdmin, loading, initialized, refreshAdminStatus } = useAuthStore();
-  const { adminDataLoading } = useRuntimeStore();
   const [refreshing, setRefreshing] = React.useState(false);
 
   React.useEffect(() => {
@@ -46,12 +43,5 @@ export const AdminGuard: React.FC<{ children: React.ReactNode }> = ({ children }
     );
   }
 
-  return (
-    <>
-      {adminDataLoading && <PagePreloader message="Aggregating system intelligence..." />}
-      <div className={adminDataLoading ? 'hidden' : 'block'}>
-        {children}
-      </div>
-    </>
-  );
+  return <>{children}</>;
 };

@@ -102,7 +102,7 @@ export const useRuntimeStore = create<RuntimeState>((set, get) => ({
           if (data.version) set({ latestVersion: data.version });
         }
       } catch (e) {
-        console.error('Failed to fetch latest version', e);
+        // Version checks are non-critical.
       }
     };
     fetchVersion();

@@ -19,11 +19,11 @@ export const WorkspacePage: React.FC = () => {
     setLaunchingTool
   } = useRuntimeStore();
 
-  const { subscriptions, entitlements, userDoc, loading: subsLoading } = useSubscriptionStore();
-  const [subscribedTools, setSubscribedTools] = useState<any[]>([]);
+  const { subscriptions, entitlements, userDoc, loading: isSubscriptionLoading } = useSubscriptionStore();
+  const [activeSubscribedTools, setActiveSubscribedTools] = useState<any[]>([]);
 
   useEffect(() => {
-    if (subsLoading) return;
+    if (isSubscriptionLoading) return;
     const tools = [];
     
     // Check for ChatGPT Premium (Entitlement or Legacy)
@@ -43,21 +43,22 @@ export const WorkspacePage: React.FC = () => {
       }
     });
 
-    setSubscribedTools(tools);
-  }, [subscriptions, entitlements, userDoc, subsLoading]);
+    setActiveSubscribedTools(tools);
+  }, [subscriptions, entitlements, userDoc, isSubscriptionLoading]);
 
-  if (subsLoading) return <PagePreloader message="Synchronizing Workspace..." status="Verifying account entitlements..." />;
+  if (isSubscriptionLoading) return <PagePreloader message="Synchronizing Workspace..." status="Verifying account entitlements..." />;
 
-  const handleLaunch = async (toolId: string) => {
+  // Launch the selected AI tool securely through the browser extension
+  const handleLaunchTool = async (toolId: string) => {
     if (!user) return;
     
-    const tool = subscribedTools.find(t => t.id === toolId);
-    setLaunchingTool(tool?.name || 'Tool');
+    const selectedTool = activeSubscribedTools.find(t => t.id === toolId);
+    setLaunchingTool(selectedTool?.name || 'Tool');
     setSyncState('syncing');
     setSyncError(null);
 
     try {
-      // 1. Fetch Session Data
+      // 1. Fetch legacy-compatible session data from users/{uid}.
       const userDocRef = doc(db, 'users', user.uid);
       const userDoc = await getDoc(userDocRef);
 
@@ -81,7 +82,7 @@ export const WorkspacePage: React.FC = () => {
         throw new Error('Xtrinox Bridge is required to launch. Please install or enable the extension.');
       }
 
-      // 3. Sync Payload
+      // 3. Sync Payload with Extension
       const result = await extensionService.inject(encryptedPayload, decryptionKey);
       
       setSyncState('success');
@@ -119,7 +120,7 @@ export const WorkspacePage: React.FC = () => {
         </div>
       </div>
 
-      {subscribedTools.length === 0 ? (
+      {activeSubscribedTools.length === 0 ? (
         <div className="flex-grow flex flex-col items-center justify-center px-lg py-xxl bg-background">
           <div className="max-w-4xl w-full text-center mb-xl">
             <h1 className="font-display text-display text-on-surface mb-md">Your workspace is ready</h1>
@@ -173,7 +174,7 @@ export const WorkspacePage: React.FC = () => {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-lg">
-          {subscribedTools.map(tool => (
+          {activeSubscribedTools.map(tool => (
             <div key={tool.id} className="bg-surface rounded-2xl border border-outline-variant p-lg shadow-sm hover:shadow-md transition-all">
               <div className="flex justify-between items-start mb-md">
                 <div className="h-12 w-12 bg-primary-container rounded-xl flex items-center justify-center text-on-primary-container">
@@ -185,7 +186,7 @@ export const WorkspacePage: React.FC = () => {
               <p className="text-body-md text-on-surface-variant mb-xl">Professional grade AI session orchestration.</p>
               
               <button 
-                onClick={() => handleLaunch(tool.id)}
+                onClick={() => handleLaunchTool(tool.id)}
                 disabled={syncState === 'syncing'}
                 className="w-full bg-primary text-on-primary py-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:brightness-110 disabled:opacity-50 transition-all"
               >

@@ -7,15 +7,12 @@ export const migrationService = {
    * This creates the necessary entitlements and workspace_apps documents.
    */
   async migrateLegacyUser(userId: string, toolId: string = 'chatgpt-premium') {
-    console.log(`[Migration] Starting auto-migration for user ${userId} to tool ${toolId}...`);
-    
     try {
       // 1. Check if they already have the new entitlement to avoid redundant writes
       const entRef = doc(db, 'entitlements', `${userId}_${toolId}`);
       const entSnap = await getDoc(entRef);
       
       if (entSnap.exists()) {
-        console.log(`[Migration] User ${userId} already has a modern entitlement. Skipping.`);
         return;
       }
 
@@ -47,9 +44,8 @@ export const migrationService = {
         createdAt: serverTimestamp()
       });
 
-      console.log(`[Migration] Successfully migrated user ${userId} to new flow.`);
     } catch (err) {
-      console.error(`[Migration] Failed to migrate user ${userId}:`, err);
+      // Migration is best-effort and must not expose user identifiers in logs.
     }
   }
 };

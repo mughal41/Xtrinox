@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { firestoreService } from '../services/firestore.service';
 import { MarketplaceTool } from '../firebase/schema';
+import { SEO_PRODUCTS_AS_MARKETPLACE_TOOLS, mergeSeoProductWithFirestoreTool } from '../data/seoProducts.mjs';
 
 interface MarketplaceState {
   tools: MarketplaceTool[];
@@ -11,7 +12,7 @@ interface MarketplaceState {
 }
 
 export const useMarketplaceStore = create<MarketplaceState>((set) => ({
-  tools: [],
+  tools: SEO_PRODUCTS_AS_MARKETPLACE_TOOLS as MarketplaceTool[],
   loading: false,
   error: null,
 
@@ -19,10 +20,17 @@ export const useMarketplaceStore = create<MarketplaceState>((set) => ({
     set({ loading: true, error: null });
     try {
       const tools = await firestoreService.getMarketplaceTools();
-      set({ tools, loading: false });
+      const mergedTools = tools.map((tool) => mergeSeoProductWithFirestoreTool(tool));
+      set({
+        tools: mergedTools.length > 0 ? mergedTools as MarketplaceTool[] : SEO_PRODUCTS_AS_MARKETPLACE_TOOLS as MarketplaceTool[],
+        loading: false,
+      });
     } catch (err: any) {
-      console.error('[Marketplace] Fetch failed:', err);
-      set({ loading: false, error: err.message });
+      set({
+        tools: SEO_PRODUCTS_AS_MARKETPLACE_TOOLS as MarketplaceTool[],
+        loading: false,
+        error: err.message,
+      });
     }
   },
 }));
