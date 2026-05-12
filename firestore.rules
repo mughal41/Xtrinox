@@ -1,0 +1,91 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // --- HELPER FUNCTIONS ---
+    function isAuthenticated() { return request.auth != null; }
+    function isAdmin() { 
+      return request.auth != null && 
+             ('admin' in request.auth.token) && 
+             request.auth.token.admin == true; 
+    }
+
+    // --- MARKETPLACE & TOOLS (Public read) ---
+    match /marketplace_tools/{toolId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // --- SUBSCRIPTIONS ---
+    // Supports both:
+    //   - Legacy flow: document ID == userId (direct get)
+    //   - New flow: collection query where('userId', '==', uid)
+    match /subscriptions/{subId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin(); 
+    }
+
+    // --- ENTITLEMENTS ---
+    // Read: any authenticated user (queries are scoped by userId on the client)
+    // Create: authenticated users can create their OWN entitlements (migration)
+    // Update/Delete: admin only
+    match /entitlements/{entId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() 
+                    && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isAdmin();
+    }
+
+    // --- USER PROFILES ---
+    match /users/{userId} {
+      allow read, write: if request.auth.uid == userId || isAdmin();
+    }
+
+    // --- WORKSPACE & APPS ---
+    // Read: any authenticated user (queries scoped by userId on client)
+    // Create: authenticated users can create their OWN workspace apps (migration)
+    // Update: owner or admin
+    // Delete: admin only
+    match /workspace_apps/{appId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() 
+                    && request.resource.data.userId == request.auth.uid;
+      allow update: if isAuthenticated();
+      allow delete: if isAdmin();
+    }
+
+    // --- LAUNCH LOGS ---
+    match /launch_logs/{logId} {
+      allow read: if isAdmin();
+      allow create: if isAuthenticated();
+    }
+
+    // --- ADMIN AUDIT LOGS ---
+    match /admin_audit_logs/{logId} {
+      allow read, write: if isAdmin();
+    }
+
+    // --- NOTIFICATIONS ---
+    match /notifications/{notifId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    // --- RUNTIME STATES ---
+    match /runtime_states/{stateId} {
+      allow read, write: if request.auth.uid == stateId || isAdmin();
+    }
+
+    // --- DEVICES ---
+    match /devices/{deviceId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAuthenticated();
+      allow delete: if isAdmin();
+    }
+
+    // --- SYSTEM CONFIGS ---
+    match /system_configs/{configId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+  }
+}

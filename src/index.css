@@ -1,24 +1,143 @@
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-}
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap');
+@import "tailwindcss";
+@config "../tailwind.config.js";
 
-html,
-body,
-#root {
-  min-height: 100%;
+@theme {
+  /* Color palette from Stitch design */
+  --color-primary: #0058be;
+  --color-on-primary: #ffffff;
+  --color-primary-container: #2170e4;
+  --color-on-primary-container: #fefcff;
+  --color-primary-fixed: #d8e2ff;
+  --color-primary-fixed-dim: #adc6ff;
+  --color-on-primary-fixed: #001a42;
+  --color-on-primary-fixed-variant: #004395;
+
+  --color-secondary: #575e70;
+  --color-on-secondary: #ffffff;
+  --color-secondary-container: #d9dff5;
+  --color-on-secondary-container: #5c6274;
+  --color-secondary-fixed: #dce2f7;
+  --color-secondary-fixed-dim: #c0c6db;
+  --color-on-secondary-fixed: #141b2b;
+  --color-on-secondary-fixed-variant: #404758;
+
+  --color-tertiary: #924700;
+  --color-on-tertiary: #ffffff;
+  --color-tertiary-container: #b75b00;
+  --color-on-tertiary-container: #fffbff;
+  --color-tertiary-fixed: #ffdcc6;
+  --color-tertiary-fixed-dim: #ffb786;
+  --color-on-tertiary-fixed: #311400;
+  --color-on-tertiary-fixed-variant: #723600;
+
+  --color-background: #f9f9ff;
+  --color-on-background: #191b23;
+
+  --color-surface: #f9f9ff;
+  --color-on-surface: #191b23;
+  --color-surface-variant: #e1e2ec;
+  --color-on-surface-variant: #424754;
+  --color-surface-dim: #d8d9e3;
+  --color-surface-bright: #f9f9ff;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #f2f3fd;
+  --color-surface-container: #ecedf7;
+  --color-surface-container-high: #e6e7f2;
+  --color-surface-container-highest: #e1e2ec;
+
+  --color-outline: #727785;
+  --color-outline-variant: #c2c6d6;
+
+  --color-error: #ba1a1a;
+  --color-on-error: #ffffff;
+  --color-error-container: #ffdad6;
+  --color-on-error-container: #93000a;
+
+  --color-inverse-surface: #2e3038;
+  --color-inverse-on-surface: #eff0fa;
+  --color-inverse-primary: #adc6ff;
+
+  /* Typography */
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  
+  /* Spacing */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 40px;
+  --spacing-xxl: 64px;
+  --spacing-gutter: 20px;
 }
 
 body {
-  margin: 0;
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: var(--font-sans);
+  background-color: var(--color-background);
+  color: var(--color-on-surface);
 }
 
 .material-symbols-outlined {
-  font-variation-settings:
-    'FILL' 0,
-    'wght' 400,
-    'GRAD' 0,
-    'opsz' 24;
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
 }
+
+/* Typography utility classes */
+/* Typography utility classes */
+.font-display, .text-display { 
+  font-size: 28px; line-height: 1.1; letter-spacing: -0.02em; font-weight: 800; 
+}
+@media (min-width: 768px) {
+  .font-display, .text-display { font-size: 48px; }
+}
+
+.font-h1, .text-h1 { 
+  font-size: 20px; line-height: 1.2; letter-spacing: -0.01em; font-weight: 700; 
+}
+@media (min-width: 768px) {
+  .font-h1, .text-h1 { font-size: 32px; }
+}
+
+.font-h2, .text-h2 { 
+  font-size: 18px; line-height: 1.25; letter-spacing: -0.01em; font-weight: 700; 
+}
+@media (min-width: 768px) {
+  .font-h2, .text-h2 { font-size: 24px; }
+}
+
+.font-h3, .text-h3 { 
+  font-size: 16px; line-height: 1.4; font-weight: 600; 
+}
+
+.font-body-lg, .text-body-lg { 
+  font-size: 15px; line-height: 1.6; font-weight: 400; 
+}
+@media (min-width: 768px) {
+  .font-body-lg, .text-body-lg { font-size: 18px; }
+}
+
+.font-body-md, .text-body-md { 
+  font-size: 14px; line-height: 1.5; font-weight: 400; 
+}
+
+.font-label-md, .text-label-md { 
+  font-size: 12px; line-height: 1; letter-spacing: 0.02em; font-weight: 500; 
+}
+
+.font-label-sm, .text-label-sm { 
+  font-size: 11px; line-height: 1; letter-spacing: 0.03em; font-weight: 600; 
+}
+
+/* Removed manual utility classes for colors and spacing as Tailwind v4 automatically generates them from @theme and tailwind.config.js */
+
+
+/* Basic Prose styling for SEO content */
+.prose h1 { font-size: 2em; font-weight: 700; margin-bottom: 0.5em; }
+.prose h2 { font-size: 1.5em; font-weight: 600; margin-top: 1.5em; margin-bottom: 0.5em; }
+.prose h3 { font-size: 1.25em; font-weight: 600; margin-top: 1.25em; margin-bottom: 0.5em; }
+.prose p { margin-bottom: 1em; line-height: 1.6; }
+.prose ul { list-style-type: disc; margin-left: 1.5em; margin-bottom: 1em; }
+.prose ol { list-style-type: decimal; margin-left: 1.5em; margin-bottom: 1em; }
+.prose li { margin-bottom: 0.5em; }
+.prose a { color: var(--color-primary); text-decoration: underline; }
+.prose strong { font-weight: 700; }
