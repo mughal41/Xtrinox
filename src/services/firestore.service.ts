@@ -172,9 +172,13 @@ class FirestoreService {
   }
 
   async isDeviceBlocked(deviceId: string): Promise<boolean> {
-    const q = query(collection(db, 'devices'), where('deviceId', '==', deviceId), where('blocked', '==', true));
-    const snapshot = await getDocs(q);
-    return !snapshot.empty;
+    try {
+      const q = query(collection(db, 'devices'), where('deviceId', '==', deviceId), where('blocked', '==', true));
+      const snapshot = await getDocs(q);
+      return !snapshot.empty;
+    } catch (e) {
+      return false;
+    }
   }
 
   /**

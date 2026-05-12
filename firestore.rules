@@ -84,7 +84,7 @@ service cloud.firestore {
 
     // --- SYSTEM CONFIGS ---
     match /system_configs/{configId} {
-      allow read: if isAuthenticated();
+      allow read: if true;
       allow write: if isAdmin();
     }
   }
