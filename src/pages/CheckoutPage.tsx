@@ -7,8 +7,8 @@ import { useAuthStore } from '../state/useAuthStore';
 import { AlertCircle, Building2, CheckCircle2, CreditCard, MessageCircle, ShieldCheck, Smartphone } from 'lucide-react';
 import { getLocalizedPrice, getUserTimezone, parseUsdPrice } from '../utils/pricing';
 
-const WHATSAPP_NUMBER = '+92';
-const EASYPAISA_NUMBER = '3368042000';
+const WHATSAPP_NUMBER = '+923368042000';
+const EASYPAISA_NUMBER = '03368042000';
 const EASYPAISA_ACCOUNT_TITLE = 'USAMA ZAFAR';
 const BANK_NAME = 'UBL';
 const BANK_ACCOUNT_TITLE = 'USAMA ZAFAR';
