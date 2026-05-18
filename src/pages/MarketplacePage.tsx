@@ -4,15 +4,14 @@ import { useMarketplaceStore } from '../state/useMarketplaceStore';
 import { useSubscriptionStore } from '../state/useSubscriptionStore';
 import { MarketplaceTool } from '../firebase/schema';
 import { PagePreloader } from '../components/PagePreloader';
-import { getLocalizedPrice, parseUsdPrice } from '../utils/pricing';
-import { useCurrencyStore } from '../state/useCurrencyStore';
+import { getLocalizedPrice, getUserTimezone, parseUsdPrice } from '../utils/pricing';
 
 const ToolCard: React.FC<{ marketplaceTool: MarketplaceTool }> = ({ marketplaceTool }) => {
   const navigate = useNavigate();
-  const countryCode = useCurrencyStore((state) => state.countryCode);
+  const timezone = useMemo(getUserTimezone, []);
   const localizedPrice = useMemo(
-    () => getLocalizedPrice(parseUsdPrice(marketplaceTool.monthlyPrice), countryCode),
-    [marketplaceTool.monthlyPrice, countryCode]
+    () => getLocalizedPrice(parseUsdPrice(marketplaceTool.monthlyPrice), timezone),
+    [marketplaceTool.monthlyPrice, timezone]
   );
   const imageSrc = marketplaceTool.imageUrl || marketplaceTool.bannerUrl;
   
@@ -158,7 +157,7 @@ const SeoContentSection: React.FC = () => (
     </div>
 
     {/* Feature Pillars (3-col) */}
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto mb-12">
+    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 max-w-5xl mx-auto mb-12">
       {[
         {
           icon: 'rocket_launch',
@@ -350,7 +349,7 @@ export const MarketplacePage: React.FC = () => {
             </button>
           )}
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-lg">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-lg">
           {filteredMarketplaceTools.map(tool => (
             <ToolCard key={tool.id} marketplaceTool={tool} />
           ))}

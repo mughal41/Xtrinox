@@ -5,8 +5,7 @@ import { db } from '../firebase/config';
 import { MarketplaceTool } from '../firebase/schema';
 import { useAuthStore } from '../state/useAuthStore';
 import { AlertCircle, Building2, CheckCircle2, CreditCard, MessageCircle, ShieldCheck, Smartphone } from 'lucide-react';
-import { getLocalizedPrice, parseUsdPrice } from '../utils/pricing';
-import { useCurrencyStore } from '../state/useCurrencyStore';
+import { getLocalizedPrice, getUserTimezone, parseUsdPrice } from '../utils/pricing';
 
 const WHATSAPP_NUMBER = '+923368042000';
 const EASYPAISA_NUMBER = '03368042000';
@@ -46,7 +45,7 @@ export const CheckoutPage: React.FC = () => {
   const [isPaymentProcessing, setIsPaymentProcessing] = useState(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethodId | null>(null);
   const [validationError, setValidationError] = useState('');
-  const countryCode = useCurrencyStore((state) => state.countryCode);
+  const timezone = useMemo(getUserTimezone, []);
 
   const usdPrice = useMemo(
     () => parseUsdPrice(selectedProduct?.monthlyPrice || ''),
@@ -54,8 +53,8 @@ export const CheckoutPage: React.FC = () => {
   );
 
   const localizedPrice = useMemo(
-    () => getLocalizedPrice(usdPrice, countryCode),
-    [countryCode, usdPrice]
+    () => getLocalizedPrice(usdPrice, timezone),
+    [timezone, usdPrice]
   );
 
   const selectedMethod = PAYMENT_METHODS.find((method) => method.id === selectedPaymentMethod);
@@ -142,8 +141,8 @@ export const CheckoutPage: React.FC = () => {
         <p className="text-slate-500">Review your subscription and secure your access.</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-12">
-        <div className="lg:col-span-3 space-y-8">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-12">
+        <div className="md:col-span-3 space-y-8">
            <div className="bg-white rounded-3xl p-8 border border-slate-200 shadow-sm space-y-6">
               <h3 className="font-bold text-lg text-slate-900 flex items-center gap-2">
                 <CreditCard className="w-5 h-5 text-primary" />
@@ -256,7 +255,7 @@ export const CheckoutPage: React.FC = () => {
            </div>
         </div>
 
-        <div className="lg:col-span-2 space-y-6">
+        <div className="md:col-span-2 space-y-6">
           <div className="bg-slate-900 rounded-3xl p-8 text-white shadow-2xl space-y-6 relative overflow-hidden">
              <div className="relative z-10 space-y-6">
                <h3 className="font-bold text-lg opacity-60 uppercase tracking-widest text-[10px]">Order Summary</h3>
