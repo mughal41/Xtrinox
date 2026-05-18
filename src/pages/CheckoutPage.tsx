@@ -5,7 +5,8 @@ import { db } from '../firebase/config';
 import { MarketplaceTool } from '../firebase/schema';
 import { useAuthStore } from '../state/useAuthStore';
 import { AlertCircle, Building2, CheckCircle2, CreditCard, MessageCircle, ShieldCheck, Smartphone } from 'lucide-react';
-import { getLocalizedPrice, getUserTimezone, parseUsdPrice } from '../utils/pricing';
+import { getLocalizedPrice, parseUsdPrice } from '../utils/pricing';
+import { useCurrencyStore } from '../state/useCurrencyStore';
 
 const WHATSAPP_NUMBER = '+923368042000';
 const EASYPAISA_NUMBER = '03368042000';
@@ -45,7 +46,7 @@ export const CheckoutPage: React.FC = () => {
   const [isPaymentProcessing, setIsPaymentProcessing] = useState(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethodId | null>(null);
   const [validationError, setValidationError] = useState('');
-  const timezone = useMemo(getUserTimezone, []);
+  const countryCode = useCurrencyStore((state) => state.countryCode);
 
   const usdPrice = useMemo(
     () => parseUsdPrice(selectedProduct?.monthlyPrice || ''),
@@ -53,8 +54,8 @@ export const CheckoutPage: React.FC = () => {
   );
 
   const localizedPrice = useMemo(
-    () => getLocalizedPrice(usdPrice, timezone),
-    [timezone, usdPrice]
+    () => getLocalizedPrice(usdPrice, countryCode),
+    [countryCode, usdPrice]
   );
 
   const selectedMethod = PAYMENT_METHODS.find((method) => method.id === selectedPaymentMethod);

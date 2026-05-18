@@ -11,6 +11,7 @@ import { useAuthStore } from './state/useAuthStore';
 import { useRuntimeStore } from './state/useRuntimeStore';
 import { useSubscriptionStore } from './state/useSubscriptionStore';
 import { initializeMarketplace } from './services/init.service';
+import { useCurrencyStore } from './state/useCurrencyStore';
 
 import { AdminLayout } from './components/AdminLayout';
 import { AdminGuard } from './components/AdminGuard';
@@ -49,6 +50,7 @@ import { firestoreService } from './services/firestore.service';
 function App() {
   const initializeAuth = useAuthStore((state) => state.initialize);
   const initializeRuntime = useRuntimeStore((state) => state.initialize);
+  const initializeCurrency = useCurrencyStore((state) => state.initializeCurrency);
 
   const { user } = useAuthStore();
   const fetchSubscriptions = useSubscriptionStore((state) => state.fetchSubscriptions);
@@ -60,6 +62,7 @@ function App() {
     const unsubAuth = initializeAuth();
     const unsubRuntime = initializeRuntime();
     initializeMarketplace();
+    initializeCurrency();
 
     // 1. App-level device check (before/during auth)
     computeFingerprint().then(async (fp) => {
@@ -72,7 +75,7 @@ function App() {
       unsubAuth();
       if (typeof unsubRuntime === 'function') unsubRuntime();
     };
-  }, [initializeAuth, initializeRuntime, setCurrentDeviceId, setDeviceBlocked]);
+  }, [initializeAuth, initializeRuntime, initializeCurrency, setCurrentDeviceId, setDeviceBlocked]);
 
   useEffect(() => {
     if (user) {
