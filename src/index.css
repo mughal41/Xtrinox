@@ -72,22 +72,6 @@
   --spacing-gutter: 20px;
 }
 
-html {
-  font-size: 16px;
-}
-@media (max-width: 1440px) {
-  html { font-size: 14.5px; } /* Smooth scale down for medium laptops */
-}
-@media (max-width: 1280px) {
-  html { font-size: 13.5px; } /* Scale down for smaller laptops */
-}
-@media (max-width: 1024px) {
-  html { font-size: 14px; } /* Tablet base */
-}
-@media (max-width: 768px) {
-  html { font-size: 15px; } /* Mobile */
-}
-
 body {
   font-family: var(--font-sans);
   background-color: var(--color-background);
@@ -101,47 +85,56 @@ body {
 /* Typography utility classes */
 /* Typography utility classes */
 .font-display, .text-display { 
-  font-size: 1.75rem; line-height: 1.1; letter-spacing: -0.02em; font-weight: 800; 
+  font-size: 28px; line-height: 1.1; letter-spacing: -0.02em; font-weight: 800; 
 }
 @media (min-width: 768px) {
-  .font-display, .text-display { font-size: 3rem; }
+  .font-display, .text-display { font-size: 36px; }
+}
+@media (min-width: 1024px) {
+  .font-display, .text-display { font-size: 48px; }
 }
 
 .font-h1, .text-h1 { 
-  font-size: 1.25rem; line-height: 1.2; letter-spacing: -0.01em; font-weight: 700; 
+  font-size: 20px; line-height: 1.2; letter-spacing: -0.01em; font-weight: 700; 
 }
 @media (min-width: 768px) {
-  .font-h1, .text-h1 { font-size: 2rem; }
+  .font-h1, .text-h1 { font-size: 26px; }
+}
+@media (min-width: 1024px) {
+  .font-h1, .text-h1 { font-size: 32px; }
 }
 
 .font-h2, .text-h2 { 
-  font-size: 1.125rem; line-height: 1.25; letter-spacing: -0.01em; font-weight: 700; 
+  font-size: 18px; line-height: 1.25; letter-spacing: -0.01em; font-weight: 700; 
 }
 @media (min-width: 768px) {
-  .font-h2, .text-h2 { font-size: 1.5rem; }
+  .font-h2, .text-h2 { font-size: 20px; }
+}
+@media (min-width: 1024px) {
+  .font-h2, .text-h2 { font-size: 24px; }
 }
 
 .font-h3, .text-h3 { 
-  font-size: 1rem; line-height: 1.4; font-weight: 600; 
+  font-size: 16px; line-height: 1.4; font-weight: 600; 
 }
 
 .font-body-lg, .text-body-lg { 
-  font-size: 0.9375rem; line-height: 1.6; font-weight: 400; 
+  font-size: 15px; line-height: 1.6; font-weight: 400; 
 }
-@media (min-width: 768px) {
-  .font-body-lg, .text-body-lg { font-size: 1.125rem; }
+@media (min-width: 1024px) {
+  .font-body-lg, .text-body-lg { font-size: 18px; }
 }
 
 .font-body-md, .text-body-md { 
-  font-size: 0.875rem; line-height: 1.5; font-weight: 400; 
+  font-size: 14px; line-height: 1.5; font-weight: 400; 
 }
 
 .font-label-md, .text-label-md { 
-  font-size: 0.75rem; line-height: 1; letter-spacing: 0.02em; font-weight: 500; 
+  font-size: 12px; line-height: 1; letter-spacing: 0.02em; font-weight: 500; 
 }
 
 .font-label-sm, .text-label-sm { 
-  font-size: 0.6875rem; line-height: 1; letter-spacing: 0.03em; font-weight: 600; 
+  font-size: 11px; line-height: 1; letter-spacing: 0.03em; font-weight: 600; 
 }
 
 /* Removed manual utility classes for colors and spacing as Tailwind v4 automatically generates them from @theme and tailwind.config.js */

@@ -173,7 +173,7 @@ export const WorkspacePage: React.FC = () => {
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-lg">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-lg">
           {activeSubscribedTools.map(tool => (
             <div key={tool.id} className="bg-surface rounded-2xl border border-outline-variant p-lg shadow-sm hover:shadow-md transition-all">
               <div className="flex justify-between items-start mb-md">

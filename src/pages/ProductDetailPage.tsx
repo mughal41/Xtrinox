@@ -27,8 +27,7 @@ import {
   Workflow,
 } from 'lucide-react';
 import { getSeoProductById, mergeSeoProductWithFirestoreTool } from '../data/seoProducts.mjs';
-import { getLocalizedPrice, parseUsdPrice } from '../utils/pricing';
-import { useCurrencyStore } from '../state/useCurrencyStore';
+import { getLocalizedPrice, getUserTimezone, parseUsdPrice } from '../utils/pricing';
 
 import ReactMarkdown from 'react-markdown';
 
@@ -69,12 +68,12 @@ export const ProductDetailPage: React.FC = () => {
   const navigate = useNavigate();
   const [productData, setProductData] = useState<ProductDetailData | null>(null);
   const [isProductLoading, setIsProductLoading] = useState(true);
-  const countryCode = useCurrencyStore((state) => state.countryCode);
+  const timezone = useMemo(getUserTimezone, []);
   
   // Check if user has an active subscription to this product
   const hasActiveSubscription = useSubscriptionStore((state) => state.isSubscribed(id || ''));
   const usdPrice = useMemo(() => parseUsdPrice(productData?.monthlyPrice), [productData?.monthlyPrice]);
-  const localizedPrice = useMemo(() => getLocalizedPrice(usdPrice, countryCode), [countryCode, usdPrice]);
+  const localizedPrice = useMemo(() => getLocalizedPrice(usdPrice, timezone), [timezone, usdPrice]);
 
   useEffect(() => {
     const fetchTool = async () => {
@@ -112,7 +111,7 @@ export const ProductDetailPage: React.FC = () => {
         Back to Marketplace
       </button>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-start">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-16 items-start">
         <div className="space-y-8">
           <div className="relative aspect-video rounded-3xl overflow-hidden shadow-2xl border border-slate-200 group">
              {(productData.imageUrl || productData.bannerUrl) ? (

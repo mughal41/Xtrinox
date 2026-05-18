@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useLocation } from 'react-router-dom';
 import { useRuntimeStore } from '../state/useRuntimeStore';
 import { ModernModal } from './ModernModal';
@@ -20,7 +20,6 @@ export const ModernRuntimeModals: React.FC = () => {
   } = useRuntimeStore();
   
   const location = useLocation();
-  const [suppressUpdateModal, setSuppressUpdateModal] = useState(false);
 
   const shouldSuppressModal = 
     location.pathname.includes('/marketplace') || 
@@ -30,7 +29,7 @@ export const ModernRuntimeModals: React.FC = () => {
     location.pathname === '/Xtrinox/' ||
     location.pathname === '/';
   
-  const isUpdateAvailable = !suppressUpdateModal && extensionVersion && latestVersion && extensionVersion !== latestVersion;
+  const isUpdateAvailable = extensionVersion && latestVersion && extensionVersion !== latestVersion;
 
   // 0. DEVICE BLOCKED GATING (Overrides everything, no suppression)
   if (deviceBlocked) {
@@ -180,7 +179,7 @@ export const ModernRuntimeModals: React.FC = () => {
 
       {/* 3. Connector Update Available Modal */}
       <ModernModal 
-        isOpen={isUpdateAvailable && !isUpdating && !shouldSuppressModal}
+        isOpen={isUpdateAvailable && !isUpdating}
         maxWidth="max-w-md"
       >
         <div className="p-lg flex flex-col items-center text-center border-b border-outline-variant bg-surface-container-low/50">
@@ -225,10 +224,7 @@ export const ModernRuntimeModals: React.FC = () => {
             <span className="material-symbols-outlined text-[20px]">download</span>
             Update Connector
           </a>
-          <button 
-            onClick={() => setSuppressUpdateModal(true)}
-            className="w-full h-[40px] bg-transparent text-secondary font-body-md text-body-md hover:bg-surface-container-high rounded-lg transition-colors"
-          >
+          <button className="w-full h-[40px] bg-transparent text-secondary font-body-md text-body-md hover:bg-surface-container-high rounded-lg transition-colors">
             Remind Me Later
           </button>
         </div>
