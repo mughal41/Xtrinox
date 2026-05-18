@@ -27,7 +27,8 @@ import {
   Workflow,
 } from 'lucide-react';
 import { getSeoProductById, mergeSeoProductWithFirestoreTool } from '../data/seoProducts.mjs';
-import { getLocalizedPrice, getUserTimezone, parseUsdPrice } from '../utils/pricing';
+import { getLocalizedPrice, parseUsdPrice } from '../utils/pricing';
+import { useCurrencyStore } from '../state/useCurrencyStore';
 
 import ReactMarkdown from 'react-markdown';
 
@@ -68,12 +69,12 @@ export const ProductDetailPage: React.FC = () => {
   const navigate = useNavigate();
   const [productData, setProductData] = useState<ProductDetailData | null>(null);
   const [isProductLoading, setIsProductLoading] = useState(true);
-  const timezone = useMemo(getUserTimezone, []);
+  const countryCode = useCurrencyStore((state) => state.countryCode);
   
   // Check if user has an active subscription to this product
   const hasActiveSubscription = useSubscriptionStore((state) => state.isSubscribed(id || ''));
   const usdPrice = useMemo(() => parseUsdPrice(productData?.monthlyPrice), [productData?.monthlyPrice]);
-  const localizedPrice = useMemo(() => getLocalizedPrice(usdPrice, timezone), [timezone, usdPrice]);
+  const localizedPrice = useMemo(() => getLocalizedPrice(usdPrice, countryCode), [countryCode, usdPrice]);
 
   useEffect(() => {
     const fetchTool = async () => {

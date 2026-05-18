@@ -4,14 +4,15 @@ import { useMarketplaceStore } from '../state/useMarketplaceStore';
 import { useSubscriptionStore } from '../state/useSubscriptionStore';
 import { MarketplaceTool } from '../firebase/schema';
 import { PagePreloader } from '../components/PagePreloader';
-import { getLocalizedPrice, getUserTimezone, parseUsdPrice } from '../utils/pricing';
+import { getLocalizedPrice, parseUsdPrice } from '../utils/pricing';
+import { useCurrencyStore } from '../state/useCurrencyStore';
 
 const ToolCard: React.FC<{ marketplaceTool: MarketplaceTool }> = ({ marketplaceTool }) => {
   const navigate = useNavigate();
-  const timezone = useMemo(getUserTimezone, []);
+  const countryCode = useCurrencyStore((state) => state.countryCode);
   const localizedPrice = useMemo(
-    () => getLocalizedPrice(parseUsdPrice(marketplaceTool.monthlyPrice), timezone),
-    [marketplaceTool.monthlyPrice, timezone]
+    () => getLocalizedPrice(parseUsdPrice(marketplaceTool.monthlyPrice), countryCode),
+    [marketplaceTool.monthlyPrice, countryCode]
   );
   const imageSrc = marketplaceTool.imageUrl || marketplaceTool.bannerUrl;
   
