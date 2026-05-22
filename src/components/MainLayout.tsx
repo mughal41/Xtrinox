@@ -11,7 +11,7 @@ function cn(...inputs: any[]) {
 }
 
 export const MainLayout: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
-  const { user } = useAuthStore();
+  const { user, isAdmin } = useAuthStore();
   const { extensionStatus, extensionVersion, latestVersion } = useRuntimeStore();
   const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -32,6 +32,10 @@ export const MainLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
     { name: 'Devices', path: '/devices', icon: 'devices' },
     { name: 'Settings', path: '/settings', icon: 'settings' },
   ];
+
+  if (isAdmin) {
+    navItems.push({ name: 'Admin Portal', path: '/admin', icon: 'admin_panel_settings' });
+  }
 
   return (
     <div className="min-h-screen bg-background text-on-surface flex flex-col">
