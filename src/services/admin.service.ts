@@ -83,7 +83,7 @@ export function normalizeCookiesForSession(cookiesJson: any) {
     .map((cookie) => {
       const name = String(cookie?.name || '').trim();
       const value = cookie?.value === undefined || cookie?.value === null ? '' : String(cookie.value);
-      if (!name || !isSessionCookie(name)) return null;
+      if (!name) return null;
 
       const normalized: any = {
         name,
@@ -95,6 +95,7 @@ export function normalizeCookiesForSession(cookiesJson: any) {
       if (cookie.url) normalized.url = String(cookie.url).trim();
       if (cookie.secure !== undefined) normalized.secure = Boolean(cookie.secure);
       if (cookie.httpOnly !== undefined) normalized.httpOnly = Boolean(cookie.httpOnly);
+      if (cookie.hostOnly !== undefined) normalized.hostOnly = Boolean(cookie.hostOnly);
 
       const sameSite = normalizeSameSite(cookie.sameSite);
       if (sameSite) {
