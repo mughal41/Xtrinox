@@ -327,8 +327,7 @@ export const adminEntitlementService = {
     expiry.setDate(expiry.getDate() + days);
     const encryptedSession = productCookie ? await encryptSession(productCookie.cookies) : null;
 
-    const entRef = doc(db, 'entitlements', `${userId}_${toolId}`);
-    await setDoc(entRef, {
+    const entData: any = {
       userId,
       toolId,
       launchAllowed: true,
@@ -337,7 +336,17 @@ export const adminEntitlementService = {
       expiresAt: expiry,
       legacyCompatible: true,
       createdAt: serverTimestamp()
-    });
+    };
+
+    if (encryptedSession) {
+      entData.encryptedPayload = encryptedSession.payload;
+      entData.decryptionKey = encryptedSession.decryptionKey;
+      entData.productCookieId = productCookie?.id || null;
+      entData.productCookieTitle = productCookie?.title || null;
+    }
+
+    const entRef = doc(db, 'entitlements', `${userId}_${toolId}`);
+    await setDoc(entRef, entData);
 
     if (encryptedSession) {
       const userRef = doc(db, 'users', userId);
