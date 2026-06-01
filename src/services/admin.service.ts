@@ -30,6 +30,8 @@ const SESSION_COOKIE_NAME_PATTERNS = [
   /^__Secure-/i,
   /^__Host-/i,
   /^cf_clearance$/i,
+  /^__cf_bm$/i,
+  /^_cfuvid$/i,
   /^oai-did$/i,
   /^oai-sc$/i,
   /session/i,
@@ -41,6 +43,10 @@ const SESSION_COOKIE_NAME_PATTERNS = [
   /sso/i,
   /login/i,
   /credential/i,
+  /routingHint/i,
+  /anthropic/i,
+  /lastActiveOrg/i,
+  /intercom/i,
 ];
 
 const normalizeSameSite = (sameSite: any) => {
