@@ -58,17 +58,29 @@ export const WorkspacePage: React.FC = () => {
     setSyncError(null);
 
     try {
-      // 1. Fetch legacy-compatible session data from users/{uid}.
-      const userDocRef = doc(db, 'users', user.uid);
-      const userDoc = await getDoc(userDocRef);
+      // 1. Fetch specific session data for this tool from entitlements
+      const entDocRef = doc(db, 'entitlements', `${user.uid}_${toolId}`);
+      const entDoc = await getDoc(entDocRef);
+      
+      let encryptedPayload;
+      let decryptionKey;
 
-      if (!userDoc.exists()) {
-        throw new Error('No session data found. Please contact support.');
+      if (entDoc.exists() && entDoc.data().encryptedPayload) {
+        encryptedPayload = entDoc.data().encryptedPayload;
+        decryptionKey = entDoc.data().decryptionKey;
+      } else {
+        // Fallback to legacy user doc
+        const userDocRef = doc(db, 'users', user.uid);
+        const userDoc = await getDoc(userDocRef);
+
+        if (!userDoc.exists()) {
+          throw new Error('No session data found. Please contact support.');
+        }
+
+        const data = userDoc.data();
+        encryptedPayload = data?.encryptedPayload;
+        decryptionKey = data?.decryptionKey;
       }
-
-      const data = userDoc.data();
-      const encryptedPayload = data?.encryptedPayload;
-      const decryptionKey = data?.decryptionKey;
 
       if (!encryptedPayload?.ciphertext || !decryptionKey) {
         throw new Error('Incomplete session data.');
@@ -92,7 +104,9 @@ export const WorkspacePage: React.FC = () => {
       // we don't need to do anything. If it didn't, we open the tool URL.
       setTimeout(() => {
         if (result && !result.redirectUrl) {
-           window.open('https://chatgpt.com', '_blank');
+           if (toolId.toLowerCase().includes('chatgpt')) {
+             window.open('https://chatgpt.com', '_blank');
+           }
         }
         setSyncState('idle');
         setLaunchingTool(null);
