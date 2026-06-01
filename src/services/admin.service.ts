@@ -232,13 +232,45 @@ export const adminProductCookieService = {
   },
 
   async updateProductCookie(cookieId: string, data: any, adminUid: string) {
+    const normalizedCookies = normalizeCookiesForSession(data.cookies);
+    
     await updateDoc(doc(db, 'product_cookies', cookieId), {
       marketplaceToolId: data.marketplaceToolId,
       title: data.title,
-      cookies: normalizeCookiesForSession(data.cookies),
+      cookies: normalizedCookies,
       active: data.active ?? true,
       updatedAt: serverTimestamp(),
     });
+
+    // Auto-sync updated cookies to users who have this as their active product cookie
+    try {
+      const encryptedSession = await encryptSession(normalizedCookies);
+      const usersSnap = await getDocs(query(collection(db, 'users'), where('activeProductCookieId', '==', cookieId)));
+      const batch = writeBatch(db);
+
+      usersSnap.forEach(userDoc => {
+        // Update user legacy fallback
+        batch.update(userDoc.ref, {
+          encryptedPayload: encryptedSession.payload,
+          decryptionKey: encryptedSession.decryptionKey,
+          updatedAt: serverTimestamp()
+        });
+
+        // Update specific entitlement document
+        const entRef = doc(db, 'entitlements', `${userDoc.id}_${data.marketplaceToolId}`);
+        batch.update(entRef, {
+          encryptedPayload: encryptedSession.payload,
+          decryptionKey: encryptedSession.decryptionKey,
+        });
+      });
+
+      if (usersSnap.size > 0) {
+        await batch.commit();
+      }
+    } catch (e) {
+      console.warn("Auto-sync failed, users may need to be re-assigned manually.", e);
+    }
+
     await logAuditAction(adminUid, 'UPDATE_PRODUCT_COOKIE', cookieId, {
       marketplaceToolId: data.marketplaceToolId,
       title: data.title,
