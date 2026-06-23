@@ -30,8 +30,6 @@ const SESSION_COOKIE_NAME_PATTERNS = [
   /^__Secure-/i,
   /^__Host-/i,
   /^cf_clearance$/i,
-  /^__cf_bm$/i,
-  /^_cfuvid$/i,
   /^oai-did$/i,
   /^oai-sc$/i,
   /session/i,
@@ -47,6 +45,8 @@ const SESSION_COOKIE_NAME_PATTERNS = [
   /anthropic/i,
   /lastActiveOrg/i,
   /intercom/i,
+  /^_puid$/i,
+  /^oai-/i,
 ];
 
 const normalizeSameSite = (sameSite: any) => {
@@ -108,7 +108,7 @@ export function normalizeCookiesForSession(cookiesJson: any) {
 
       return normalized;
     })
-    .filter(Boolean);
+    .filter((cookie: any) => cookie !== null && isSessionCookie(cookie.name));
 }
 
 // --- ENCRYPTION ENGINE (WEB CRYPTO API) ---
