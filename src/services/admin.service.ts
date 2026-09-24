@@ -62,10 +62,12 @@ const normalizeExpirationDate = (cookie: any) => {
   if (raw === undefined || raw === null || raw === '' || cookie.session === true) return undefined;
 
   const numeric = Number(raw);
-  if (!Number.isFinite(numeric)) return undefined;
+  if (!Number.isFinite(numeric)) throw new Error(`Cookie "${cookie.name}" has an invalid expiration date.`);
 
   const seconds = numeric > 100000000000 ? Math.floor(numeric / 1000) : numeric;
-  if (seconds <= Math.floor(Date.now() / 1000)) return undefined;
+  if (seconds <= Math.floor(Date.now() / 1000)) {
+    throw new Error(`Cookie "${cookie.name}" has expired. Sign in again and export fresh cookies.`);
+  }
 
   return seconds;
 };
@@ -80,6 +82,7 @@ export function normalizeCookiesForSession(cookiesJson: any) {
   }
 
   return cookiesJson
+    .filter((cookie: any) => isSessionCookie(String(cookie?.name || '').trim()))
     .map((cookie) => {
       const name = String(cookie?.name || '').trim();
       const value = cookie?.value === undefined || cookie?.value === null ? '' : String(cookie.value);
