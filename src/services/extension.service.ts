@@ -15,7 +15,7 @@ export interface ExtensionMessage {
 const EXTENSION_ID = 'REPLACE_WITH_YOUR_EXTENSION_ID';
 const BRIDGE_MESSAGE_SOURCE = 'xtrinox-extension-bridge';
 const APP_MESSAGE_SOURCE = 'xtrinox-web-app';
-const BRIDGE_REPLY_TIMEOUT_MS = 5000;
+const BRIDGE_REPLY_TIMEOUT_MS = 30000;
 
 class ExtensionService {
   private pendingRequests = new Map<string, { resolve: Function; reject: Function; timeoutId: number }>();
@@ -84,14 +84,14 @@ class ExtensionService {
       return new Promise((resolve, reject) => {
         chrome.runtime.sendMessage(
           EXTENSION_ID,
-          { action: 'injectSession', payload, key },
+          { action: 'syncBridge', payload, key },
           (response) => {
             if (chrome.runtime.lastError) {
               reject(new Error('Extension not reachable.'));
               return;
             }
-            if (response?.ok === false) {
-              reject(new Error(response.error || 'Extension rejected the request.'));
+            if (response?.ok !== true) {
+              reject(new Error(response?.error || 'Extension returned no successful response.'));
               return;
             }
             resolve(response);
@@ -105,7 +105,7 @@ class ExtensionService {
       
       const timeoutId = window.setTimeout(() => {
         this.pendingRequests.delete(requestId);
-        reject(new Error('Extension bridge timed out. Reload the page and ensure content script is active.'));
+        reject(new Error('Extension did not confirm completion within 30 seconds. The session may already have been applied; check the target tab before retrying.'));
       }, BRIDGE_REPLY_TIMEOUT_MS);
 
       this.pendingRequests.set(requestId, { resolve, reject, timeoutId });
