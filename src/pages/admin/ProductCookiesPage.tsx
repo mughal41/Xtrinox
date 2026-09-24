@@ -111,7 +111,7 @@ export const ProductCookiesPage: React.FC = () => {
 
       resetForm();
       await loadData();
-      setNotice(`Saved ${normalizedCookies.length} session cookie${normalizedCookies.length === 1 ? '' : 's'}. Removed ${removedCount} non-session cookie${removedCount === 1 ? '' : 's'}.`);
+      setNotice(`Saved ${normalizedCookies.length} session cookie${normalizedCookies.length === 1 ? '' : 's'}. Removed ${removedCount} expired or non-session cookie${removedCount === 1 ? '' : 's'}.`);
     } catch (err: any) {
       setError(err.message || 'Unable to save product cookie set.');
     } finally {
