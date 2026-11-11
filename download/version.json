@@ -1,0 +1,17 @@
+{
+  "product": "Xtrinox for Android",
+  "versionName": "1.0.2",
+  "versionCode": 3,
+  "lastUpdated": "11 November 2026",
+  "fileName": "Xtrinox-v1.0.2-release.apk",
+  "downloadUrl": "../downloads/Xtrinox-v1.0.2-release.apk",
+  "size": "3.00 MB",
+  "minimumAndroid": "Android 7.0 or newer",
+  "sha256": "3ff363fb41720e2173428886082eee8a75160d54a56752180b143d2f3e93ab62",
+  "changes": [
+    "Added safe, reference-based session compatibility diagnostics.",
+    "Improved browser-extension cookie format compatibility.",
+    "Removed unused Firebase App Check and Play Integrity integration.",
+    "Hardened and optimized the signed production release."
+  ]
+}
