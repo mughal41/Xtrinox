@@ -49,21 +49,21 @@ export const AndroidAppAnnouncement: React.FC = () => {
 
   const viewAndroidApp = () => {
     markAsRead();
-    navigate('/marketplace/chatgpt-premium?androidApp=1');
+    navigate('/workspace?androidApp=1');
   };
 
   return (
     <ModernModal isOpen={isOpen} maxWidth="max-w-[520px]">
-      <div className="p-8 text-center sm:p-10">
-        <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-2xl border border-primary-fixed-dim bg-primary-fixed text-primary shadow-sm">
-          <span className="material-symbols-outlined text-[40px]">android</span>
+      <div className="p-5 text-center sm:p-10">
+        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-primary-fixed-dim bg-primary-fixed text-primary shadow-sm sm:mb-6 sm:h-20 sm:w-20">
+          <span className="material-symbols-outlined text-[34px] sm:text-[40px]">android</span>
         </div>
         <span className="mb-3 inline-flex rounded-full bg-primary-fixed px-3 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-on-primary-fixed-variant">
           New release
         </span>
-        <h2 className="text-2xl font-bold text-on-surface">Xtrinox is now on Android</h2>
-        <p className="mx-auto mt-3 max-w-sm text-[15px] leading-6 text-on-surface-variant">
-          Launch your entitled ChatGPT workspace from the lightweight, signed Xtrinox Android app.
+        <h2 className="text-xl font-bold text-on-surface sm:text-2xl">Xtrinox is now on Android</h2>
+        <p className="mx-auto mt-3 max-w-[380px] text-[14px] leading-6 text-on-surface-variant sm:text-[15px]">
+          Access your eligible Xtrinox products from the lightweight, signed Xtrinox Android app.
         </p>
 
         <div className="mt-7 grid grid-cols-2 gap-3 rounded-xl border border-outline-variant bg-surface-container-low p-4 text-left">

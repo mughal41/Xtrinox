@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useAuthStore } from '../state/useAuthStore';
 import { useRuntimeStore } from '../state/useRuntimeStore';
 import { useSubscriptionStore } from '../state/useSubscriptionStore';
@@ -7,8 +8,10 @@ import { PagePreloader } from '../components/PagePreloader';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { extensionService } from '../services/extension.service';
+import { AndroidAppDownloadModal, AndroidAppRestoreButton } from '../components/AndroidAppDownloadModal';
 
 export const WorkspacePage: React.FC = () => {
+  const [searchParams] = useSearchParams();
   const { user } = useAuthStore();
   const { 
     extensionStatus, 
@@ -21,6 +24,15 @@ export const WorkspacePage: React.FC = () => {
 
   const { subscriptions, entitlements, userDoc, loading: isSubscriptionLoading } = useSubscriptionStore();
   const [activeSubscribedTools, setActiveSubscribedTools] = useState<any[]>([]);
+  const [isAndroidModalOpen, setIsAndroidModalOpen] = useState(false);
+  const [isAndroidModalMinimized, setIsAndroidModalMinimized] = useState(false);
+
+  useEffect(() => {
+    if (searchParams.get('androidApp') === '1') {
+      setIsAndroidModalOpen(true);
+      setIsAndroidModalMinimized(false);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     if (isSubscriptionLoading) return;
@@ -121,12 +133,22 @@ export const WorkspacePage: React.FC = () => {
 
   return (
     <div className="space-y-xl">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col gap-md sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="font-h1 text-h1 text-on-surface">Your Workspace</h1>
           <p className="text-body-md text-on-surface-variant">Manage and launch your active AI subscriptions.</p>
         </div>
-        <div className="flex gap-sm">
+        <div className="flex flex-wrap items-center gap-sm">
+           <button
+             onClick={() => {
+               setIsAndroidModalOpen(true);
+               setIsAndroidModalMinimized(false);
+             }}
+             className="flex items-center gap-2 rounded-lg border border-primary bg-primary-fixed/60 px-3 py-2 text-label-md font-bold text-primary transition-colors hover:bg-primary-fixed"
+           >
+             <span className="material-symbols-outlined text-[18px]">android</span>
+             Android App
+           </button>
            <span className="bg-emerald-500/10 text-emerald-600 px-3 py-1 rounded-full text-label-sm font-bold border border-emerald-500/20 flex items-center gap-1">
              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
              System Ready
@@ -233,6 +255,16 @@ export const WorkspacePage: React.FC = () => {
           <span className="material-symbols-outlined">check_circle</span>
           <p className="text-label-md font-bold">Workspace Synced Successfully! Opening Tool...</p>
         </div>
+      )}
+
+      <AndroidAppDownloadModal
+        isOpen={isAndroidModalOpen && !isAndroidModalMinimized}
+        onClose={() => setIsAndroidModalOpen(false)}
+        onMinimize={() => setIsAndroidModalMinimized(true)}
+      />
+
+      {isAndroidModalOpen && isAndroidModalMinimized && (
+        <AndroidAppRestoreButton onClick={() => setIsAndroidModalMinimized(false)} />
       )}
     </div>
   );

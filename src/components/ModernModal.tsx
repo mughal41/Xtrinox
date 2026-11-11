@@ -20,6 +20,19 @@ export const ModernModal: React.FC<ModalProps> = ({
 }) => {
   if (!isOpen) return null;
 
+  const resolvedMaxWidth = (() => {
+    if (maxWidth === 'max-w-md') return '448px';
+    if (maxWidth === 'max-w-lg') return '512px';
+    const arbitraryWidth = maxWidth.match(/max-w-\[(\d+)px\]/)?.[1];
+    return arbitraryWidth ? `${arbitraryWidth}px` : '480px';
+  })();
+
+  const resolvedAccentColor = accentColor === 'bg-error'
+    ? '#ba1a1a'
+    : accentColor === 'bg-tertiary'
+      ? '#924700'
+      : '#0058be';
+
   const modalContent = (
     <div 
       className="xt-modal-overlay"
@@ -30,7 +43,7 @@ export const ModernModal: React.FC<ModalProps> = ({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '16px',
+        padding: 'clamp(10px, 3vw, 24px)',
         backgroundColor: 'rgba(15, 23, 42, 0.4)',
         backdropFilter: 'blur(4px)',
       }}
@@ -41,10 +54,13 @@ export const ModernModal: React.FC<ModalProps> = ({
         style={{
           backgroundColor: '#ffffff',
           width: '100%',
-          maxWidth: '512px',
-          borderRadius: '24px',
+          maxWidth: resolvedMaxWidth,
+          maxHeight: 'calc(100dvh - 20px)',
+          borderRadius: 'clamp(16px, 3vw, 24px)',
           boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-          overflow: 'hidden',
+          overflowX: 'hidden',
+          overflowY: 'auto',
+          overscrollBehavior: 'contain',
           display: 'flex',
           flexDirection: 'column',
           position: 'relative',
@@ -53,7 +69,7 @@ export const ModernModal: React.FC<ModalProps> = ({
         onClick={(e) => e.stopPropagation()}
       >
         {/* Accent Bar */}
-        <div style={{ height: '6px', width: '100%', backgroundColor: '#0058be' }}></div>
+        <div style={{ height: '6px', width: '100%', flexShrink: 0, backgroundColor: resolvedAccentColor }}></div>
         
         {onMinimize && (
           <button

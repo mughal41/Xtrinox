@@ -286,7 +286,7 @@ export const ModernRuntimeModals: React.FC = () => {
             </div>
           </div>
           <h3 className="font-h3 text-h3 text-on-surface mb-sm">Downloading Connector Update</h3>
-          <p className="font-body-md text-body-md text-on-surface-variant mb-xl max-w-sm mx-auto">
+          <p className="font-body-md text-body-md text-on-surface-variant mb-xl max-w-[384px] mx-auto">
             The update is being downloaded and verified. This usually takes less than 2 minutes depending on your network.
           </p>
           <div className="w-full bg-surface-variant h-2 rounded-full mb-lg overflow-hidden">
