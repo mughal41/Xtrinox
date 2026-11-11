@@ -5,6 +5,7 @@ import { useRuntimeStore } from '../state/useRuntimeStore';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { auth } from '../firebase/config';
+import { AndroidAppAnnouncement } from './AndroidAppAnnouncement';
 
 function cn(...inputs: any[]) {
   return twMerge(clsx(inputs));
@@ -60,12 +61,6 @@ export const MainLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
                   {item.name}
                 </Link>
               ))}
-              <a
-                href={`${import.meta.env.BASE_URL}download/`}
-                className="font-medium transition-colors duration-200 py-1 border-b-2 text-sm lg:text-base text-on-surface-variant border-transparent hover:text-primary"
-              >
-                Android App
-              </a>
             </nav>
           </div>
 
@@ -147,15 +142,6 @@ export const MainLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
                   {item.name}
                 </Link>
               ))}
-              <a
-                href={`${import.meta.env.BASE_URL}download/`}
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="flex items-center gap-3 text-on-surface-variant hover:bg-surface-container-low transition-colors duration-200"
-                style={{ padding: '14px 24px', fontSize: '15px', gap: '12px' }}
-              >
-                <span className="material-symbols-outlined" style={{ fontSize: '22px' }}>android</span>
-                Android App
-              </a>
             </nav>
 
             {/* Mobile User Section */}
@@ -206,6 +192,8 @@ export const MainLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
           </div>
         )}
       </header>
+
+      <AndroidAppAnnouncement />
 
       <main className="flex-grow max-w-[1280px] w-full mx-auto" style={{ paddingLeft: '24px', paddingRight: '24px', paddingTop: '40px', paddingBottom: '40px' }}>
         {children || <Outlet />}

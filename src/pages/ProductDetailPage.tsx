@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { MarketplaceTool } from '../firebase/schema';
@@ -9,6 +9,7 @@ import {
   ArrowLeft,
   BookOpenCheck,
   Code,
+  Download,
   FileText,
   GraduationCap,
   LucideIcon,
@@ -23,11 +24,13 @@ import {
   ShieldCheck,
   ShoppingCart,
   Sparkles,
+  Smartphone,
   SpellCheck,
   Workflow,
 } from 'lucide-react';
 import { getSeoProductById, mergeSeoProductWithFirestoreTool } from '../data/seoProducts.mjs';
 import { getLocalizedPrice, getUserTimezone, parseUsdPrice } from '../utils/pricing';
+import { ModernModal } from '../components/ModernModal';
 
 import ReactMarkdown from 'react-markdown';
 
@@ -66,8 +69,11 @@ const mergeProductData = (id: string, firestoreData?: Partial<ProductDetailData>
 export const ProductDetailPage: React.FC = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [productData, setProductData] = useState<ProductDetailData | null>(null);
   const [isProductLoading, setIsProductLoading] = useState(true);
+  const [isAndroidModalOpen, setIsAndroidModalOpen] = useState(false);
+  const [isAndroidModalMinimized, setIsAndroidModalMinimized] = useState(false);
   const timezone = useMemo(getUserTimezone, []);
   
   // Check if user has an active subscription to this product
@@ -97,6 +103,13 @@ export const ProductDetailPage: React.FC = () => {
     };
     fetchTool();
   }, [id]);
+
+  useEffect(() => {
+    if (id === 'chatgpt-premium' && searchParams.get('androidApp') === '1') {
+      setIsAndroidModalOpen(true);
+      setIsAndroidModalMinimized(false);
+    }
+  }, [id, searchParams]);
 
   if (isProductLoading) return <PagePreloader message="Fetching product specifications..." />;
   if (!productData) return <div className="p-20 text-center font-bold text-rose-500 uppercase tracking-widest">Specification Not Found</div>;
@@ -193,6 +206,19 @@ export const ProductDetailPage: React.FC = () => {
                 )}
               </button>
 
+              {productData.id === 'chatgpt-premium' && (
+                <button
+                  onClick={() => {
+                    setIsAndroidModalOpen(true);
+                    setIsAndroidModalMinimized(false);
+                  }}
+                  className="flex w-full items-center justify-center gap-3 rounded-xl border border-primary bg-primary-fixed/50 py-3.5 text-sm font-bold text-primary transition-all hover:bg-primary-fixed active:scale-[0.98]"
+                >
+                  <Smartphone className="h-5 w-5" />
+                  Get Xtrinox for Android
+                </button>
+              )}
+
               <p className="text-center text-[11px] text-slate-400">
                 {hasActiveSubscription
                   ? "Your subscription is active. Access the tool in your workspace."
@@ -211,6 +237,85 @@ export const ProductDetailPage: React.FC = () => {
             <ReactMarkdown>{productData.seoContent}</ReactMarkdown>
           </div>
         </section>
+      )}
+
+      <ModernModal
+        isOpen={isAndroidModalOpen && !isAndroidModalMinimized}
+        onClose={() => setIsAndroidModalOpen(false)}
+        onMinimize={() => setIsAndroidModalMinimized(true)}
+        maxWidth="max-w-[520px]"
+      >
+        <div className="p-8 sm:p-10">
+          <div className="mb-6 flex items-start gap-4 pr-16">
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-primary-fixed text-primary">
+              <span className="material-symbols-outlined text-[30px]">android</span>
+            </div>
+            <div>
+              <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-primary">Official Android app</span>
+              <h2 className="mt-1 text-2xl font-bold text-on-surface">Xtrinox for Android</h2>
+              <p className="mt-1 text-sm leading-5 text-on-surface-variant">A focused mobile workspace for your entitled ChatGPT access.</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 overflow-hidden rounded-xl border border-outline-variant bg-surface-container-low">
+            <div className="p-4 text-center">
+              <span className="block text-[9px] font-bold uppercase tracking-wider text-outline">Version</span>
+              <span className="mt-1 block text-sm font-bold text-on-surface">1.0.2</span>
+            </div>
+            <div className="border-x border-outline-variant p-4 text-center">
+              <span className="block text-[9px] font-bold uppercase tracking-wider text-outline">Size</span>
+              <span className="mt-1 block text-sm font-bold text-on-surface">3.00 MB</span>
+            </div>
+            <div className="p-4 text-center">
+              <span className="block text-[9px] font-bold uppercase tracking-wider text-outline">Requires</span>
+              <span className="mt-1 block text-sm font-bold text-on-surface">Android 7+</span>
+            </div>
+          </div>
+
+          <div className="mt-6 space-y-3">
+            {[
+              'Launch your entitled workspace from the Xtrinox app.',
+              'Signed production release with secure Firebase authentication.',
+              'Lightweight installation with optimized session handling.'
+            ].map((item) => (
+              <div key={item} className="flex items-start gap-3 text-sm leading-5 text-on-surface-variant">
+                <span className="material-symbols-outlined mt-0.5 text-[18px] text-primary">check_circle</span>
+                <span>{item}</span>
+              </div>
+            ))}
+          </div>
+
+          <a
+            href={`${import.meta.env.BASE_URL}downloads/Xtrinox-v1.0.2-release.apk`}
+            download
+            className="mt-7 flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-primary px-6 font-semibold text-on-primary shadow-md transition-all hover:bg-primary-container active:scale-[0.98]"
+          >
+            <Download className="h-5 w-5" />
+            Download APK
+          </a>
+
+          <div className="mt-4 flex items-center justify-center gap-1.5 text-[11px] font-medium text-outline">
+            <ShieldCheck className="h-4 w-4" />
+            Signed release • Updated 11 November 2026
+          </div>
+        </div>
+      </ModernModal>
+
+      {isAndroidModalOpen && isAndroidModalMinimized && (
+        <button
+          onClick={() => setIsAndroidModalMinimized(false)}
+          className="fixed bottom-5 right-5 z-[9998] flex items-center gap-3 rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-3 text-left shadow-xl transition-all hover:-translate-y-0.5 hover:border-primary"
+          aria-label="Restore Android app download dialog"
+        >
+          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-fixed text-primary">
+            <span className="material-symbols-outlined text-[20px]">android</span>
+          </span>
+          <span className="flex flex-col">
+            <span className="text-[12px] font-bold text-on-surface">Xtrinox for Android</span>
+            <span className="text-[10px] font-medium text-on-surface-variant">Tap to restore download</span>
+          </span>
+          <span className="material-symbols-outlined text-[18px] text-primary">open_in_full</span>
+        </button>
       )}
     </div>
   );

@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom';
 interface ModalProps {
   isOpen: boolean;
   onClose?: () => void;
+  onMinimize?: () => void;
   children: React.ReactNode;
   maxWidth?: string;
   accentColor?: string;
@@ -12,6 +13,7 @@ interface ModalProps {
 export const ModernModal: React.FC<ModalProps> = ({ 
   isOpen, 
   onClose, 
+  onMinimize,
   children, 
   maxWidth = 'max-w-[480px]',
   accentColor = 'bg-primary'
@@ -53,9 +55,36 @@ export const ModernModal: React.FC<ModalProps> = ({
         {/* Accent Bar */}
         <div style={{ height: '6px', width: '100%', backgroundColor: '#0058be' }}></div>
         
+        {onMinimize && (
+          <button
+            onClick={onMinimize}
+            aria-label="Minimize dialog"
+            title="Minimize"
+            style={{
+              position: 'absolute',
+              top: '16px',
+              right: onClose ? '48px' : '16px',
+              color: '#727785',
+              backgroundColor: '#f2f3fd',
+              border: '1px solid #c2c6d6',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              width: '28px',
+              height: '28px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 10
+            }}
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>minimize</span>
+          </button>
+        )}
+
         {onClose && (
           <button 
             onClick={onClose}
+            aria-label="Close dialog"
             style={{
               position: 'absolute',
               top: '16px',

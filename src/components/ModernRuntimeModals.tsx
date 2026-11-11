@@ -21,6 +21,7 @@ export const ModernRuntimeModals: React.FC = () => {
   
   const location = useLocation();
   const [isUpdateIgnored, setIsUpdateIgnored] = React.useState(false);
+  const [isConnectorMinimized, setIsConnectorMinimized] = React.useState(false);
 
   const shouldSuppressModal = 
     location.pathname.includes('/marketplace') || 
@@ -31,6 +32,11 @@ export const ModernRuntimeModals: React.FC = () => {
     location.pathname === '/';
   
   const isUpdateAvailable = extensionVersion && latestVersion && extensionVersion !== latestVersion;
+  const shouldShowConnector = extensionStatus === 'disconnected' && !shouldSuppressModal;
+
+  React.useEffect(() => {
+    if (extensionStatus !== 'disconnected') setIsConnectorMinimized(false);
+  }, [extensionStatus]);
 
   // 0. DEVICE BLOCKED GATING (Overrides everything, no suppression)
   if (deviceBlocked) {
@@ -81,7 +87,8 @@ export const ModernRuntimeModals: React.FC = () => {
     <>
       {/* 1. Workspace Connector Required Modal */}
       <ModernModal 
-        isOpen={extensionStatus === 'disconnected' && !shouldSuppressModal}
+        isOpen={shouldShowConnector && !isConnectorMinimized}
+        onMinimize={() => setIsConnectorMinimized(true)}
       >
         <div style={{ padding: '40px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
           {/* Illustration Area */}
@@ -132,6 +139,23 @@ export const ModernRuntimeModals: React.FC = () => {
           </div>
         </div>
       </ModernModal>
+
+      {shouldShowConnector && isConnectorMinimized && (
+        <button
+          onClick={() => setIsConnectorMinimized(false)}
+          className="fixed bottom-5 right-5 z-[9998] flex items-center gap-3 rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-3 text-left shadow-xl transition-all hover:-translate-y-0.5 hover:border-primary"
+          aria-label="Restore Workspace Connector dialog"
+        >
+          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-fixed text-primary">
+            <span className="material-symbols-outlined text-[20px]">extension</span>
+          </span>
+          <span className="flex flex-col">
+            <span className="text-[12px] font-bold text-on-surface">Connector required</span>
+            <span className="text-[10px] font-medium text-on-surface-variant">Tap to restore</span>
+          </span>
+          <span className="material-symbols-outlined text-[18px] text-primary">open_in_full</span>
+        </button>
+      )}
 
       {/* 2. Workspace Conflict Detected Modal */}
       <ModernModal 
