@@ -6,17 +6,14 @@ import {
   updateDoc, 
   query, 
   orderBy, 
-  limit, 
   serverTimestamp, 
   getDoc,
   deleteDoc,
   where,
   writeBatch
 } from 'firebase/firestore';
-import { getFunctions, httpsCallable } from 'firebase/functions';
-import { db, app } from '../firebase/config';
-
-const functions = getFunctions(app);
+import { httpsCallable } from 'firebase/functions';
+import { db, functions } from '../firebase/config';
 
 // --- CLOUD FUNCTIONS CALLABLES ---
 const setUserStatusFn = httpsCallable(functions, 'setUserStatus');
@@ -116,7 +113,6 @@ export function normalizeCookiesForSession(cookiesJson: any) {
 }
 
 // --- ENCRYPTION ENGINE (WEB CRYPTO API) ---
-// This replicates the Python AES-GCM logic for extension bridge compatibility
 export async function encryptSession(cookiesJson: any) {
   const plaintext = JSON.stringify(normalizeCookiesForSession(cookiesJson));
   const encoder = new TextEncoder();
@@ -129,7 +125,6 @@ export async function encryptSession(cookiesJson: any) {
     ['encrypt']
   );
 
-  // Export key to base64 for decryptionKey field
   const exportedKey = await window.crypto.subtle.exportKey('raw', key);
   const keyBase64 = btoa(String.fromCharCode(...new Uint8Array(exportedKey)));
 
@@ -137,7 +132,6 @@ export async function encryptSession(cookiesJson: any) {
   const iv = window.crypto.getRandomValues(new Uint8Array(12));
   const ivBase64 = btoa(String.fromCharCode(...iv));
 
-  // Encrypt
   const ciphertextBuffer = await window.crypto.subtle.encrypt(
     { name: 'AES-GCM', iv },
     key,
@@ -155,6 +149,19 @@ export async function encryptSession(cookiesJson: any) {
   };
 }
 
+// --- SANITIZE AUDIT DETAILS ---
+function sanitizeAuditDetails(details: any): any {
+  if (!details || typeof details !== 'object') return details;
+  const clone = { ...details };
+  delete clone.cookies;
+  delete clone.password;
+  delete clone.newPassword;
+  delete clone.decryptionKey;
+  delete clone.encryptedPayload;
+  delete clone.token;
+  return clone;
+}
+
 // --- AUDIT SYSTEM ---
 export async function logAuditAction(adminUid: string, action: string, targetId: string, details: any) {
   const auditRef = doc(collection(db, 'admin_audit_logs'));
@@ -162,17 +169,17 @@ export async function logAuditAction(adminUid: string, action: string, targetId:
     adminUid,
     action,
     targetId,
-    details,
+    details: sanitizeAuditDetails(details),
     timestamp: serverTimestamp()
   });
 }
 
 // --- MARKETPLACE TOOLS ---
 export const adminToolsService = {
-  async getAllTools() {
+  async getAllTools(): Promise<any[]> {
     const q = query(collection(db, 'marketplace_tools'), orderBy('name', 'asc'));
     const snapshot = await getDocs(q);
-    return snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+    return snapshot.docs.map(d => ({ id: d.id, ...d.data() } as any));
   },
 
   async updateTool(toolId: string, data: any, adminUid: string) {
@@ -191,6 +198,11 @@ export const adminToolsService = {
       updatedAt: serverTimestamp() 
     });
     await logAuditAction(adminUid, 'CREATE_TOOL', toolId, data);
+  },
+
+  async deleteTool(toolId: string, adminUid: string) {
+    await deleteDoc(doc(db, 'marketplace_tools', toolId));
+    await logAuditAction(adminUid, 'DELETE_TOOL', toolId, {});
   }
 };
 
@@ -221,10 +233,15 @@ export const adminProductCookieService = {
 
   async createProductCookie(data: any, adminUid: string) {
     const ref = doc(collection(db, 'product_cookies'));
+    const normalizedCookies = normalizeCookiesForSession(data.cookies);
+    if (!normalizedCookies || normalizedCookies.length === 0) {
+      throw new Error('No valid session cookies found in JSON payload.');
+    }
+
     await setDoc(ref, {
       marketplaceToolId: data.marketplaceToolId,
       title: data.title,
-      cookies: normalizeCookiesForSession(data.cookies),
+      cookies: normalizedCookies,
       active: data.active ?? true,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
@@ -232,11 +249,15 @@ export const adminProductCookieService = {
     await logAuditAction(adminUid, 'CREATE_PRODUCT_COOKIE', ref.id, {
       marketplaceToolId: data.marketplaceToolId,
       title: data.title,
+      cookiesCount: normalizedCookies.length
     });
   },
 
   async updateProductCookie(cookieId: string, data: any, adminUid: string) {
     const normalizedCookies = normalizeCookiesForSession(data.cookies);
+    if (!normalizedCookies || normalizedCookies.length === 0) {
+      throw new Error('No valid session cookies found in JSON payload.');
+    }
     
     await updateDoc(doc(db, 'product_cookies', cookieId), {
       marketplaceToolId: data.marketplaceToolId,
@@ -253,14 +274,12 @@ export const adminProductCookieService = {
       const batch = writeBatch(db);
 
       usersSnap.forEach(userDoc => {
-        // Update user legacy fallback
         batch.update(userDoc.ref, {
           encryptedPayload: encryptedSession.payload,
           decryptionKey: encryptedSession.decryptionKey,
           updatedAt: serverTimestamp()
         });
 
-        // Update specific entitlement document
         const entRef = doc(db, 'entitlements', `${userDoc.id}_${data.marketplaceToolId}`);
         batch.update(entRef, {
           encryptedPayload: encryptedSession.payload,
@@ -272,12 +291,13 @@ export const adminProductCookieService = {
         await batch.commit();
       }
     } catch (e) {
-      console.warn("Auto-sync failed, users may need to be re-assigned manually.", e);
+      console.warn("Auto-sync warning:", e);
     }
 
     await logAuditAction(adminUid, 'UPDATE_PRODUCT_COOKIE', cookieId, {
       marketplaceToolId: data.marketplaceToolId,
       title: data.title,
+      cookiesCount: normalizedCookies.length
     });
   },
 
@@ -296,16 +316,15 @@ export const adminUserService = {
       try {
         const result = await listAdminUsersFn();
         return result.data as any[];
-      } catch (error: any) {
+      } catch {
         cloudFunctionsAvailable = false;
-        // Fallback below
       }
     }
 
     // Fallback for Spark Plan (Firestore-only)
     const q = collection(db, 'users');
     const snapshot = await getDocs(q);
-    return snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+    return snapshot.docs.map(d => ({ id: d.id, uid: d.id, ...d.data() }));
   },
 
   async setUserStatus(uid: string, disabled: boolean) {
@@ -314,7 +333,7 @@ export const adminUserService = {
     }
     try {
       return await setUserStatusFn({ uid, disabled });
-    } catch (e: any) {
+    } catch {
       throw new Error('Action failed: This feature requires Cloud Functions (Blaze Plan).');
     }
   },
@@ -325,7 +344,7 @@ export const adminUserService = {
     }
     try {
       return await createUserFn({ email, password });
-    } catch (e: any) {
+    } catch {
       throw new Error('User creation failed: This feature requires Cloud Functions (Blaze Plan).');
     }
   },
@@ -336,7 +355,7 @@ export const adminUserService = {
     }
     try {
       return await resetUserPasswordFn({ uid, newPassword });
-    } catch (e: any) {
+    } catch {
       throw new Error('Password reset failed: This feature requires Cloud Functions (Blaze Plan).');
     }
   },

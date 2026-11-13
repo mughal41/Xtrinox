@@ -16,13 +16,20 @@ export interface MarketplaceTool {
   imageUrl: string;
   bannerUrl: string;
   monthlyPrice: string;
+  pricing?: {
+    monthly?: number;
+    annual?: number;
+    formattedMonthly?: string;
+    baseUsd?: string;
+  };
   active: boolean;
   requiresBridge: boolean;
   featured: boolean;
   launchUrl: string;
   seoContent?: string; // HTML or Text for SEO ranking
-  createdAt: Timestamp;
-  updatedAt: Timestamp;
+  featureHighlights?: Array<{ icon?: string; title: string; desc: string }>;
+  createdAt: Timestamp | null;
+  updatedAt: Timestamp | null;
 }
 
 // subscriptions: User purchases
@@ -30,12 +37,12 @@ export interface Subscription {
   userId: string;
   toolId: string;
   status: 'active' | 'expired' | 'canceled' | 'suspended';
-  startedAt: Timestamp;
-  expiresAt: Timestamp;
-  autoRenew: boolean;
-  paymentProvider: 'stripe' | 'manual' | 'legacy';
-  createdAt: Timestamp;
-  updatedAt: Timestamp;
+  startedAt?: Timestamp;
+  expiresAt?: Timestamp;
+  autoRenew?: boolean;
+  paymentProvider?: 'stripe' | 'manual' | 'legacy';
+  createdAt?: Timestamp;
+  updatedAt?: Timestamp;
 }
 
 // workspace_apps: UI control for user dashboard
@@ -56,8 +63,12 @@ export interface Entitlement {
   payloadEnabled: boolean;
   launchAllowed: boolean;
   runtimeEnabled: boolean;
-  expiresAt: Timestamp;
+  expiresAt?: Timestamp | any;
   legacyCompatible: boolean;
+  encryptedPayload?: any;
+  decryptionKey?: string | null;
+  productCookieId?: string | null;
+  productCookieTitle?: string | null;
   createdAt: Timestamp;
 }
 
@@ -87,6 +98,10 @@ export interface Device {
   userId: string;
   deviceId: string;
   browser: string;
+  browserName?: string;
+  deviceType?: string;
+  city?: string;
+  country?: string;
   os: string;
   ip: string;
   location: string;
@@ -94,12 +109,15 @@ export interface Device {
   blocked: boolean;
   blockedBy: 'user' | 'admin' | null;
   blockedAt: Timestamp | null;
+  unblockRequested?: boolean;
+  unblockRequestedAt?: Timestamp | null;
   lastActiveAt: Timestamp;
   createdAt: Timestamp;
 }
 
 // launch_logs: Analytics and audit trail
 export interface LaunchLog {
+  id?: string;
   userId: string;
   toolId: string;
   launchedAt: Timestamp;
@@ -110,12 +128,18 @@ export interface LaunchLog {
 
 // runtime_states: Active state of bridge/connector per user
 export interface RuntimeStateRecord {
+  id?: string;
   userId: string;
   bridgeConnected: boolean;
-  connectorVersion: string;
-  conflictDetected: boolean;
-  syncStatus: 'idle' | 'syncing' | 'success' | 'failed';
-  lastHeartbeat: Timestamp;
+  connectorVersion?: string;
+  extensionConnected?: boolean;
+  extensionVersion?: string;
+  browser?: string;
+  os?: string;
+  status?: string;
+  conflictDetected?: boolean;
+  syncStatus?: 'idle' | 'syncing' | 'success' | 'failed';
+  lastHeartbeat?: Timestamp;
   updatedAt: Timestamp;
 }
 
@@ -144,4 +168,36 @@ export interface FeatureFlags {
   marketplaceEnabled: boolean;
   workspaceEnabled: boolean;
   newRuntimeEnabled: boolean;
+  updatedAt?: Timestamp;
+}
+
+// Global system configs
+export interface GlobalSystemConfig {
+  maintenanceMode: boolean;
+  registrationEnabled: boolean;
+  marketplaceVisible: boolean;
+  bridgeVersionRequired: string;
+  updatedAt?: Timestamp;
+}
+
+// User Profile document
+export interface UserProfileDocument {
+  id?: string;
+  email?: string;
+  displayName?: string;
+  bio?: string;
+  notificationPreferences?: {
+    productUpdates: boolean;
+    billingAlerts: boolean;
+    marketing: boolean;
+  };
+  hasPendingUnblockRequest?: boolean;
+  encryptedPayload?: any;
+  decryptionKey?: string | null;
+  activeToolId?: string | null;
+  activeProductCookieId?: string | null;
+  activeProductCookieTitle?: string | null;
+  disabled?: boolean;
+  createdAt?: Timestamp;
+  updatedAt?: Timestamp;
 }

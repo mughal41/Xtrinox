@@ -9,9 +9,10 @@ interface MarketplaceState {
   error: string | null;
 
   fetchTools: () => Promise<void>;
+  getToolById: (id: string) => MarketplaceTool | undefined;
 }
 
-export const useMarketplaceStore = create<MarketplaceState>((set) => ({
+export const useMarketplaceStore = create<MarketplaceState>((set, get) => ({
   tools: SEO_PRODUCTS_AS_MARKETPLACE_TOOLS as MarketplaceTool[],
   loading: false,
   error: null,
@@ -20,17 +21,30 @@ export const useMarketplaceStore = create<MarketplaceState>((set) => ({
     set({ loading: true, error: null });
     try {
       const tools = await firestoreService.getMarketplaceTools();
-      const mergedTools = tools.map((tool) => mergeSeoProductWithFirestoreTool(tool));
-      set({
-        tools: mergedTools.length > 0 ? mergedTools as MarketplaceTool[] : SEO_PRODUCTS_AS_MARKETPLACE_TOOLS as MarketplaceTool[],
-        loading: false,
-      });
+      if (tools && tools.length > 0) {
+        const mergedTools = tools.map((tool) => mergeSeoProductWithFirestoreTool(tool));
+        set({
+          tools: mergedTools as MarketplaceTool[],
+          loading: false,
+        });
+      } else {
+        set({
+          tools: SEO_PRODUCTS_AS_MARKETPLACE_TOOLS as MarketplaceTool[],
+          loading: false,
+        });
+      }
     } catch (err: any) {
       set({
         tools: SEO_PRODUCTS_AS_MARKETPLACE_TOOLS as MarketplaceTool[],
         loading: false,
-        error: err.message,
+        error: err.message || 'Failed to fetch marketplace tools from Firestore',
       });
     }
   },
+
+  getToolById: (id: string) => {
+    const { tools } = get();
+    const normalized = id.toLowerCase();
+    return tools.find(t => t.id === id || t.slug === id || t.id.toLowerCase().includes(normalized) || normalized.includes(t.id.toLowerCase()));
+  }
 }));

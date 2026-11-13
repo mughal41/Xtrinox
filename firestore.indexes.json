@@ -1,0 +1,29 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "product_cookies",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "marketplaceToolId", "order": "ASCENDING" },
+        { "fieldPath": "active", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "devices",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "unblockRequested", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "launch_logs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "launchedAt", "order": "DESCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

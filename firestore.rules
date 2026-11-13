@@ -8,6 +8,9 @@ service cloud.firestore {
              ('admin' in request.auth.token) && 
              request.auth.token.admin == true; 
     }
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
 
     // --- MARKETPLACE & TOOLS (Public read) ---
     match /marketplace_tools/{toolId} {
@@ -21,49 +24,42 @@ service cloud.firestore {
     }
 
     // --- SUBSCRIPTIONS ---
-    // Supports both:
-    //   - Legacy flow: document ID == userId (direct get)
-    //   - New flow: collection query where('userId', '==', uid)
     match /subscriptions/{subId} {
-      allow read: if isAuthenticated();
-      allow write: if isAdmin(); 
+      allow read: if isAdmin()
+                  || isOwner(subId)
+                  || isOwner(resource.data.userId);
+      allow create, update, delete: if isAdmin();
     }
 
     // --- ENTITLEMENTS ---
-    // Read: any authenticated user (queries are scoped by userId on the client)
-    // Create: authenticated users can create their OWN entitlements (migration)
-    // Update/Delete: admin only
+    // Owners may read only their records; only admins may grant/revoke access.
     match /entitlements/{entId} {
-      allow read: if isAuthenticated();
-      allow create: if isAdmin()
-                    || isAuthenticated() 
-                    && request.resource.data.userId == request.auth.uid;
-      allow update, delete: if isAdmin();
+      allow read: if isAdmin() || isOwner(resource.data.userId);
+      allow create, update, delete: if isAdmin();
     }
 
     // --- USER PROFILES ---
+    // Safe user updates permitted: displayName, bio, notificationPreferences, hasPendingUnblockRequest, updatedAt
     match /users/{userId} {
-      allow read, write: if request.auth.uid == userId || isAdmin();
+      allow read: if isAdmin() || isOwner(userId);
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin()
+                    || (isOwner(userId)
+                        && request.resource.data.diff(resource.data).affectedKeys()
+                             .hasOnly(['displayName', 'bio', 'notificationPreferences', 'hasPendingUnblockRequest', 'updatedAt']));
     }
 
     // --- WORKSPACE & APPS ---
-    // Read: any authenticated user (queries scoped by userId on client)
-    // Create: authenticated users can create their OWN workspace apps (migration)
-    // Update: owner or admin
-    // Delete: admin only
+    // Owners may read only their records; only admins may change assignments.
     match /workspace_apps/{appId} {
-      allow read: if isAuthenticated();
-      allow create: if isAdmin()
-                    || isAuthenticated() 
-                    && request.resource.data.userId == request.auth.uid;
-      allow update: if isAuthenticated();
-      allow delete: if isAdmin();
+      allow read: if isAdmin() || isOwner(resource.data.userId);
+      allow create, update, delete: if isAdmin();
     }
 
     // --- LAUNCH LOGS ---
     match /launch_logs/{logId} {
       allow read: if isAdmin();
-      allow create: if isAuthenticated();
+      allow create: if isOwner(request.resource.data.userId);
     }
 
     // --- ADMIN AUDIT LOGS ---
@@ -73,19 +69,23 @@ service cloud.firestore {
 
     // --- NOTIFICATIONS ---
     match /notifications/{notifId} {
-      allow read: if isAuthenticated();
-      allow write: if isAdmin();
+      allow read: if isAdmin() || isOwner(resource.data.userId);
+      allow create, update, delete: if isAdmin();
     }
 
     // --- RUNTIME STATES ---
     match /runtime_states/{stateId} {
-      allow read, write: if request.auth.uid == stateId || isAdmin();
+      allow read, create, update: if isAdmin() || isOwner(stateId);
+      allow delete: if isAdmin();
     }
 
     // --- DEVICES ---
     match /devices/{deviceId} {
-      allow read: if isAuthenticated();
-      allow create, update: if isAuthenticated();
+      allow read: if isAdmin() || isOwner(resource.data.userId);
+      allow create: if isAdmin() || isOwner(request.resource.data.userId);
+      allow update: if isAdmin()
+                    || (isOwner(resource.data.userId)
+                        && isOwner(request.resource.data.userId));
       allow delete: if isAdmin();
     }
 

@@ -1,324 +1,604 @@
 import React, { useState, useEffect } from 'react';
+import { RouteName, UserProfile } from '../types';
 import { useAuthStore } from '../state/useAuthStore';
-import { signOut, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
-import { auth } from '../firebase/config';
-import { useNavigate } from 'react-router-dom';
+import { useSubscriptionStore } from '../state/useSubscriptionStore';
+import { firestoreService } from '../services/firestore.service';
+import { EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 'firebase/auth';
+import {
+  Shield,
+  Bell,
+  CreditCard,
+  ChevronDown,
+  Eye,
+  EyeOff,
+  Check,
+  AlertCircle,
+  X,
+  Loader2,
+  Edit2
+} from 'lucide-react';
 
-const Toggle: React.FC<{ enabled: boolean; onChange: () => void }> = ({ enabled, onChange }) => (
-  <button
-    onClick={onChange}
-    className={`w-12 h-6 rounded-full relative cursor-pointer flex items-center transition-colors duration-200 ${
-      enabled ? 'bg-primary' : 'bg-outline-variant'
-    }`}
-  >
-    <div className={`w-5 h-5 bg-white rounded-full absolute transition-all duration-200 shadow-sm ${
-      enabled ? 'right-0.5' : 'left-0.5'
-    }`} />
-  </button>
-);
+interface SettingsPageProps {
+  onNavigate: (route: RouteName, param?: string) => void;
+  user: UserProfile;
+  setUser: React.Dispatch<React.SetStateAction<UserProfile>>;
+  onSignOut: () => void;
+}
 
-export const SettingsPage: React.FC = () => {
-  const { user } = useAuthStore();
-  const navigate = useNavigate();
+export const SettingsPage: React.FC<SettingsPageProps> = ({
+  onNavigate,
+  user,
+  onSignOut
+}) => {
+  const { user: authUser } = useAuthStore();
+  const { fetchSubscriptions } = useSubscriptionStore();
 
-  // Profile Settings
-  const [userDisplayName, setUserDisplayName] = useState('');
-  const [userBio, setUserBio] = useState('');
+  // Drawer state & Profile edit
+  const [profileDrawerOpen, setProfileDrawerOpen] = useState(false);
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [editName, setEditName] = useState(user.name);
+  const [editBio, setEditBio] = useState(user.bio);
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [profileStatus, setProfileStatus] = useState<string | null>(null);
 
-  // Password
+  useEffect(() => {
+    setEditName(user.name);
+    setEditBio(user.bio);
+  }, [user]);
+
+  // Form states
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [passwordError, setPasswordError] = useState('');
-  const [passwordSuccess, setPasswordSuccess] = useState('');
-  const [changingPassword, setChangingPassword] = useState(false);
+  const [showCurrent, setShowCurrent] = useState(false);
+  const [showNew, setShowNew] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
 
-  // Notifications
-  const [wantsProductUpdates, setWantsProductUpdates] = useState(true);
-  const [wantsBillingAlerts, setWantsBillingAlerts] = useState(true);
-  const [wantsMarketingAlerts, setWantsMarketingAlerts] = useState(false);
+  const [currentError, setCurrentError] = useState('');
+  const [newError, setNewError] = useState('');
+  const [confirmError, setConfirmError] = useState('');
+  const [formStatus, setFormStatus] = useState<{ text: string; type: 'success' | 'error' | '' }>({
+    text: '',
+    type: ''
+  });
+  const [isUpdating, setIsUpdating] = useState(false);
 
-  useEffect(() => {
-    if (user) {
-      setUserDisplayName(user.displayName || user.email?.split('@')[0] || '');
+  // Sign out modal
+  const [signOutModalOpen, setSignOutModalOpen] = useState(false);
+
+  const handleSaveProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!authUser) return;
+    setProfileSaving(true);
+    setProfileStatus(null);
+    try {
+      await firestoreService.updateUserProfile(authUser.uid, {
+        displayName: editName.trim(),
+        bio: editBio.trim()
+      });
+      await fetchSubscriptions(authUser.uid);
+      setProfileStatus('Profile updated successfully.');
+      setIsEditingProfile(false);
+    } catch (err: any) {
+      setProfileStatus(err.message || 'Failed to update profile.');
+    } finally {
+      setProfileSaving(false);
     }
-  }, [user]);
+  };
 
-  // Handle Firebase password change with re-authentication
-  const handlePasswordChange = async () => {
-    setPasswordError('');
-    setPasswordSuccess('');
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCurrentError('');
+    setNewError('');
+    setConfirmError('');
+    setFormStatus({ text: '', type: '' });
+
+    let invalid = false;
+
+    if (!currentPassword) {
+      setCurrentError('Enter your current password.');
+      invalid = true;
+    }
+
+    if (newPassword.length < 8) {
+      setNewError('Use at least 8 characters.');
+      invalid = true;
+    } else if (newPassword === currentPassword && currentPassword) {
+      setNewError('Choose a password different from the current one.');
+      invalid = true;
+    }
 
     if (newPassword !== confirmPassword) {
-      setPasswordError('Passwords do not match.');
-      return;
+      setConfirmError('Passwords do not match.');
+      invalid = true;
     }
-    if (newPassword.length < 6) {
-      setPasswordError('New password must be at least 6 characters.');
-      return;
-    }
-    if (!currentPassword) {
-      setPasswordError('Current password is required for re-authentication.');
+
+    if (invalid) {
+      setFormStatus({ text: 'Review the highlighted fields.', type: 'error' });
       return;
     }
 
-    setChangingPassword(true);
+    if (!authUser || !authUser.email) {
+      setFormStatus({ text: 'No authenticated user session found.', type: 'error' });
+      return;
+    }
+
+    setIsUpdating(true);
+    setFormStatus({ text: 'Verifying your current password…', type: '' });
+
     try {
-      const credential = EmailAuthProvider.credential(user!.email!, currentPassword);
-      await reauthenticateWithCredential(user!, credential);
-      await updatePassword(user!, newPassword);
-      setPasswordSuccess('Password updated successfully.');
+      const cred = EmailAuthProvider.credential(authUser.email, currentPassword);
+      await reauthenticateWithCredential(authUser, cred);
+      await updatePassword(authUser, newPassword);
+
+      setIsUpdating(false);
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
+      setFormStatus({ text: 'Your password was successfully updated.', type: 'success' });
     } catch (err: any) {
-      setPasswordError(err.message || 'Failed to update password.');
-    } finally {
-      setChangingPassword(false);
+      setIsUpdating(false);
+      if (err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
+        setCurrentError('Current password is incorrect.');
+        setFormStatus({ text: 'Current password verification failed.', type: 'error' });
+      } else if (err.code === 'auth/requires-recent-login') {
+        setFormStatus({ text: 'Please sign in again before changing password.', type: 'error' });
+      } else {
+        setFormStatus({ text: err.message || 'Failed to update password.', type: 'error' });
+      }
     }
   };
 
-  // End all active user sessions and sign out of Firebase
-  const handleLogoutAll = async () => {
-    await signOut(auth);
-    navigate('/login');
-  };
-
-  if (!user) return null;
+  const initial = user.name ? user.name.charAt(0).toUpperCase() : 'A';
 
   return (
-    <div className="space-y-xl max-w-4xl">
-      {/* Page Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="font-h1 text-on-surface">Account Settings</h1>
-          <p className="text-body-md text-on-surface-variant mt-sm">Manage your account, security, and notification preferences.</p>
+    <div className="min-h-screen bg-[var(--bg)] text-[var(--text)] py-12 px-6 transition-colors">
+      <div className="max-w-[1060px] mx-auto">
+        {/* Page Head */}
+        <div className="mb-7">
+          <h1 className="font-heading font-extrabold text-3xl sm:text-4xl text-[var(--text)] tracking-tight">
+            Account settings
+          </h1>
+          <p className="text-sm text-[var(--sub)] mt-1.5">
+            Review your account and manage how you sign in.
+          </p>
         </div>
-      </div>
 
-      {/* Section: Profile */}
-      <section className="grid grid-cols-1 md:grid-cols-3 gap-xl">
-        <div className="md:col-span-1">
-          <h3 className="font-h2 text-on-surface">Profile</h3>
-          <p className="text-body-md text-on-surface-variant mt-sm">Update your personal identity and public-facing profile information.</p>
-        </div>
-        <div className="md:col-span-2 bg-white p-xl rounded-xl border border-surface-container-highest shadow-sm">
-          <div className="space-y-lg">
-            {/* Avatar */}
-            <div className="flex items-center gap-xl">
-              <div className="w-20 h-20 rounded-full bg-primary-container flex items-center justify-center text-on-primary-container text-2xl font-bold">
-                {user.email?.[0]?.toUpperCase() || 'U'}
+        {/* 1. Full-Width Profile Identity Strip */}
+        <section
+          aria-labelledby="account-label"
+          className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] overflow-hidden mb-6 shadow-sm"
+        >
+          <div className="p-5 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5">
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 rounded-2xl bg-[var(--brand)] border border-[var(--border)] text-[var(--brand-text)] font-heading font-extrabold text-2xl flex items-center justify-center shrink-0 shadow-sm">
+                {initial}
               </div>
-              <div>
-                <button className="px-md py-sm border border-outline-variant rounded-lg text-label-md text-on-surface hover:bg-surface-container-low transition-colors">
-                  Change Avatar
-                </button>
+              <div className="min-w-0">
+                <span
+                  id="account-label"
+                  className="text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--brand)] block mb-1"
+                >
+                  YOUR ACCOUNT
+                </span>
+                <h2 className="font-heading font-bold text-lg text-[var(--text)] truncate">{user.name}</h2>
+                <p className="text-xs text-[var(--sub)] truncate mt-0.5">{user.email}</p>
               </div>
             </div>
 
-            {/* Fields */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-md">
-              <div className="flex flex-col gap-xs">
-                <label className="text-label-md text-on-surface-variant font-bold">Display Name</label>
-                <input
-                  className="w-full p-md bg-surface-container-low border border-transparent focus:border-primary focus:bg-surface rounded-lg text-body-md transition-all outline-none"
-                  type="text"
-                  value={userDisplayName}
-                  onChange={(e) => setUserDisplayName(e.target.value)}
+            <div className="flex items-center gap-3 self-end sm:self-center">
+              <button
+                type="button"
+                onClick={() => {
+                  setProfileDrawerOpen(true);
+                  setIsEditingProfile(!isEditingProfile);
+                }}
+                className="h-9 px-3 rounded-lg border border-[var(--border)] hover:border-[var(--brand)] hover:bg-[var(--surface-raised)] text-xs font-semibold text-[var(--text)] flex items-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <Edit2 className="w-3.5 h-3.5 text-[var(--brand)]" />
+                <span>{isEditingProfile ? 'Cancel' : 'Edit profile'}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setProfileDrawerOpen(!profileDrawerOpen)}
+                className="h-9 px-3.5 rounded-lg border border-[var(--border)] hover:border-[var(--brand)] hover:bg-[var(--surface-raised)] text-xs font-semibold text-[var(--text)] flex items-center gap-1.5 transition-colors"
+                aria-expanded={profileDrawerOpen}
+              >
+                <span>{profileDrawerOpen ? 'Hide details' : 'View details'}</span>
+                <ChevronDown
+                  className={`w-3.5 h-3.5 transition-transform ${profileDrawerOpen ? 'rotate-180' : ''}`}
                 />
-              </div>
-              <div className="flex flex-col gap-xs">
-                <label className="text-label-md text-on-surface-variant font-bold">Email Address</label>
-                <input
-                  className="w-full p-md bg-surface-container-low border border-transparent rounded-lg text-body-md text-on-surface-variant cursor-not-allowed"
-                  type="email"
-                  value={user.email || ''}
-                  disabled
-                />
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-xs">
-              <label className="text-label-md text-on-surface-variant font-bold">Bio</label>
-              <textarea
-                className="w-full p-md bg-surface-container-low border border-transparent focus:border-primary focus:bg-surface rounded-lg text-body-md transition-all outline-none resize-none"
-                rows={3}
-                value={userBio}
-                onChange={(e) => setUserBio(e.target.value)}
-                placeholder="Brief description for your profile. Maximum 200 characters."
-              />
-              <p className="text-[11px] text-on-surface-variant">{userBio.length}/200 characters</p>
+              </button>
             </div>
           </div>
-        </div>
-      </section>
 
-      <hr className="border-outline-variant" />
+          {/* Expandable Profile Drawer */}
+          {profileDrawerOpen && (
+            <div className="border-t border-[var(--border)] px-6 py-5 bg-[var(--surface-raised)] animate-in fade-in-50">
+              {isEditingProfile ? (
+                <form onSubmit={handleSaveProfile} className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-[11px] font-semibold text-[var(--text)] mb-1.5">
+                        Display name
+                      </label>
+                      <input
+                        type="text"
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        placeholder="Your display name"
+                        className="w-full h-10 px-3 rounded-xl border border-[var(--border)] bg-[var(--input)] text-xs text-[var(--text)] outline-none focus:border-[var(--brand)]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-semibold text-[var(--text)] mb-1.5">
+                        Bio / Headline
+                      </label>
+                      <input
+                        type="text"
+                        value={editBio}
+                        onChange={(e) => setEditBio(e.target.value)}
+                        placeholder="Engineer, Researcher, Designer..."
+                        className="w-full h-10 px-3 rounded-xl border border-[var(--border)] bg-[var(--input)] text-xs text-[var(--text)] outline-none focus:border-[var(--brand)]"
+                      />
+                    </div>
+                  </div>
 
-      {/* Section: Security */}
-      <section className="grid grid-cols-1 md:grid-cols-3 gap-xl">
-        <div className="md:col-span-1">
-          <h3 className="font-h2 text-on-surface">Security</h3>
-          <p className="text-body-md text-on-surface-variant mt-sm">Update your password and manage session security.</p>
-        </div>
-        <div className="md:col-span-2 bg-white p-xl rounded-xl border border-surface-container-highest shadow-sm">
-          <div className="space-y-md">
-            <div className="flex flex-col gap-xs">
-              <label className="text-label-md text-on-surface-variant font-bold">Current Password</label>
-              <input
-                className="w-full p-md bg-surface-container-low border border-transparent focus:border-primary focus:bg-surface rounded-lg text-body-md transition-all outline-none"
-                type="password"
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-                placeholder="••••••••"
-              />
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="submit"
+                      disabled={profileSaving}
+                      className="h-9 px-4 rounded-xl bg-[var(--brand)] hover:bg-[var(--brand-hover)] text-[var(--brand-text)] text-xs font-bold flex items-center gap-2 cursor-pointer disabled:opacity-70"
+                    >
+                      {profileSaving ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          <span>Saving...</span>
+                        </>
+                      ) : (
+                        <span>Save profile</span>
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIsEditingProfile(false)}
+                      className="h-9 px-3.5 rounded-xl border border-[var(--border)] text-xs font-semibold hover:bg-[var(--surface)] text-[var(--text)] cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    {profileStatus && (
+                      <span className="text-xs text-[var(--success)] font-semibold">
+                        {profileStatus}
+                      </span>
+                    )}
+                  </div>
+                </form>
+              ) : (
+                <dl className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+                  <div>
+                    <dt className="text-[11px] text-[var(--muted)] font-medium mb-1">Display name</dt>
+                    <dd className="text-xs text-[var(--text)] font-semibold">{user.name}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-[11px] text-[var(--muted)] font-medium mb-1">Email address</dt>
+                    <dd className="text-xs text-[var(--text)] font-semibold">{user.email}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-[11px] text-[var(--muted)] font-medium mb-1">Bio</dt>
+                    <dd className="text-xs text-[var(--sub)] italic">{user.bio || 'Not added'}</dd>
+                  </div>
+                </dl>
+              )}
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-md">
-              <div className="flex flex-col gap-xs">
-                <label className="text-label-md text-on-surface-variant font-bold">New Password</label>
-                <input
-                  className="w-full p-md bg-surface-container-low border border-transparent focus:border-primary focus:bg-surface rounded-lg text-body-md transition-all outline-none"
-                  type="password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="••••••••"
-                />
+          )}
+        </section>
+
+        {/* 2. Password Security Panel */}
+        <section
+          aria-labelledby="security-title"
+          className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] overflow-hidden mb-8 shadow-sm"
+        >
+          {/* Section Head */}
+          <div className="p-6 sm:p-7 flex items-start gap-4">
+            <div className="w-10 h-10 rounded-xl bg-[var(--surface-raised)] text-[var(--brand)] flex items-center justify-center shrink-0">
+              <Shield className="w-5 h-5" />
+            </div>
+            <div>
+              <h2
+                id="security-title"
+                className="font-heading font-extrabold text-xl text-[var(--text)] tracking-tight"
+              >
+                Change password
+              </h2>
+              <p className="text-xs text-[var(--sub)] mt-0.5">
+                Update the password you use to sign in to Xtrinox.
+              </p>
+            </div>
+          </div>
+
+          {/* Password Form */}
+          <form onSubmit={handlePasswordSubmit} noValidate>
+            <div className="px-6 sm:px-7 pb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Current Password */}
+              <div>
+                <label
+                  htmlFor="currentPassword"
+                  className="block text-xs font-semibold text-[var(--text)] mb-2"
+                >
+                  Current password
+                </label>
+                <div className="relative">
+                  <input
+                    id="currentPassword"
+                    type={showCurrent ? 'text' : 'password'}
+                    placeholder="Enter current password"
+                    value={currentPassword}
+                    onChange={(e) => {
+                      setCurrentPassword(e.target.value);
+                      if (currentError) setCurrentError('');
+                    }}
+                    className={`w-full h-11 px-3.5 pr-12 rounded-xl border bg-[var(--input)] text-xs text-[var(--text)] placeholder-[var(--muted)] outline-none transition-all ${
+                      currentError
+                        ? 'border-[var(--danger)] ring-1 ring-[var(--danger)]'
+                        : 'border-[var(--border)] focus:border-[var(--brand)] focus:ring-2 focus:ring-[var(--brand-soft)]'
+                    }`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowCurrent(!showCurrent)}
+                    className="absolute right-2 top-2 px-2 py-1 rounded text-[11px] font-semibold text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--surface-raised)]"
+                  >
+                    {showCurrent ? 'Hide' : 'Show'}
+                  </button>
+                </div>
+                {currentError && (
+                  <p className="text-[11px] text-[var(--danger)] mt-1.5">{currentError}</p>
+                )}
               </div>
-              <div className="flex flex-col gap-xs">
-                <label className="text-label-md text-on-surface-variant font-bold">Confirm New Password</label>
-                <input
-                  className="w-full p-md bg-surface-container-low border border-transparent focus:border-primary focus:bg-surface rounded-lg text-body-md transition-all outline-none"
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="••••••••"
-                />
+
+              {/* New Password */}
+              <div>
+                <label
+                  htmlFor="newPassword"
+                  className="block text-xs font-semibold text-[var(--text)] mb-2"
+                >
+                  New password
+                </label>
+                <div className="relative">
+                  <input
+                    id="newPassword"
+                    type={showNew ? 'text' : 'password'}
+                    placeholder="Create new password"
+                    value={newPassword}
+                    onChange={(e) => {
+                      setNewPassword(e.target.value);
+                      if (newError) setNewError('');
+                    }}
+                    className={`w-full h-11 px-3.5 pr-12 rounded-xl border bg-[var(--input)] text-xs text-[var(--text)] placeholder-[var(--muted)] outline-none transition-all ${
+                      newError
+                        ? 'border-[var(--danger)] ring-1 ring-[var(--danger)]'
+                        : 'border-[var(--border)] focus:border-[var(--brand)] focus:ring-2 focus:ring-[var(--brand-soft)]'
+                    }`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNew(!showNew)}
+                    className="absolute right-2 top-2 px-2 py-1 rounded text-[11px] font-semibold text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--surface-raised)]"
+                  >
+                    {showNew ? 'Hide' : 'Show'}
+                  </button>
+                </div>
+                <p className="text-[11px] text-[var(--muted)] mt-1">At least 8 characters</p>
+                {newError && <p className="text-[11px] text-[var(--danger)] mt-1">{newError}</p>}
+              </div>
+
+              {/* Confirm Password */}
+              <div>
+                <label
+                  htmlFor="confirmPassword"
+                  className="block text-xs font-semibold text-[var(--text)] mb-2"
+                >
+                  Confirm new password
+                </label>
+                <div className="relative">
+                  <input
+                    id="confirmPassword"
+                    type={showConfirm ? 'text' : 'password'}
+                    placeholder="Repeat new password"
+                    value={confirmPassword}
+                    onChange={(e) => {
+                      setConfirmPassword(e.target.value);
+                      if (confirmError) setConfirmError('');
+                    }}
+                    className={`w-full h-11 px-3.5 pr-12 rounded-xl border bg-[var(--input)] text-xs text-[var(--text)] placeholder-[var(--muted)] outline-none transition-all ${
+                      confirmError
+                        ? 'border-[var(--danger)] ring-1 ring-[var(--danger)]'
+                        : 'border-[var(--border)] focus:border-[var(--brand)] focus:ring-2 focus:ring-[var(--brand-soft)]'
+                    }`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirm(!showConfirm)}
+                    className="absolute right-2 top-2 px-2 py-1 rounded text-[11px] font-semibold text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--surface-raised)]"
+                  >
+                    {showConfirm ? 'Hide' : 'Show'}
+                  </button>
+                </div>
+                {confirmError && (
+                  <p className="text-[11px] text-[var(--danger)] mt-1.5">{confirmError}</p>
+                )}
               </div>
             </div>
 
-            {passwordError && (
-              <div className="p-3 rounded-lg bg-error-container text-on-error-container text-label-md flex gap-2 items-center">
-                <span className="material-symbols-outlined text-[18px]">error</span>
-                {passwordError}
-              </div>
-            )}
-            {passwordSuccess && (
-              <div className="p-3 rounded-lg bg-emerald-50 text-emerald-700 text-label-md flex gap-2 items-center border border-emerald-200">
-                <span className="material-symbols-outlined text-[18px]">check_circle</span>
-                {passwordSuccess}
-              </div>
-            )}
+            {/* Form Action & Status */}
+            <div className="px-6 sm:px-7 pb-6 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+              <button
+                type="submit"
+                disabled={isUpdating}
+                className="h-11 px-5 rounded-xl bg-[var(--brand)] hover:bg-[var(--brand-hover)] text-[var(--brand-text)] text-xs font-bold flex items-center justify-center gap-2 shadow-sm transition-all active:scale-[0.98] disabled:opacity-75 cursor-pointer"
+              >
+                {isUpdating ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Updating…</span>
+                  </>
+                ) : (
+                  <span>Update password</span>
+                )}
+              </button>
 
+              {formStatus.text && (
+                <div
+                  className={`text-xs ${
+                    formStatus.type === 'success'
+                      ? 'text-[var(--success)] font-semibold'
+                      : formStatus.type === 'error'
+                      ? 'text-[var(--danger)] font-semibold'
+                      : 'text-[var(--sub)]'
+                  }`}
+                  role="status"
+                >
+                  {formStatus.text}
+                </div>
+              )}
+            </div>
+          </form>
+
+          {/* Section Footer: Sign Out of Current Browser */}
+          <div className="p-5 sm:px-7 border-t border-[var(--border)] bg-[var(--surface-raised)] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <h3 className="font-heading font-bold text-xs sm:text-sm text-[var(--text)]">
+                Sign out of this browser
+              </h3>
+              <p className="text-xs text-[var(--sub)] mt-0.5">
+                Other signed-in devices will remain connected.
+              </p>
+            </div>
             <button
-              onClick={handlePasswordChange}
-              disabled={changingPassword}
-              className="bg-primary text-on-primary px-lg py-sm rounded-lg text-label-md font-bold shadow-sm active:scale-95 transition-all disabled:opacity-50"
+              type="button"
+              onClick={() => setSignOutModalOpen(true)}
+              className="h-9 px-4 rounded-lg border border-[var(--border)] hover:border-[var(--brand)] hover:bg-[var(--surface)] text-xs font-semibold text-[var(--text)] transition-colors"
             >
-              {changingPassword ? 'Updating...' : 'Update Password'}
+              Sign out
             </button>
           </div>
+        </section>
 
-          {/* Logout All */}
-          <div className="mt-xl pt-lg border-t border-surface-container-highest">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-h3 text-on-surface">Sign Out Everywhere</p>
-                <p className="text-body-md text-on-surface-variant">This will log you out of all active sessions and devices.</p>
+        {/* 3. Secondary Preferences (Honest read-only view) */}
+        <section aria-label="Additional preferences" className="space-y-3">
+          <h2 className="font-heading font-bold text-base text-[var(--text)]">Other preferences</h2>
+
+          <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] divide-y divide-[var(--border)] overflow-hidden shadow-xs">
+            {/* Notifications Disclosure */}
+            <details className="group">
+              <summary className="p-4 sm:p-5 flex items-center justify-between gap-4 cursor-pointer hover:bg-[var(--surface-raised)] transition-colors list-none">
+                <div className="flex items-center gap-3.5">
+                  <div className="w-9 h-9 rounded-xl bg-[var(--surface-raised)] text-[var(--brand)] flex items-center justify-center shrink-0">
+                    <Bell className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <strong className="block text-xs sm:text-sm font-semibold text-[var(--text)]">
+                      Notifications
+                    </strong>
+                    <small className="block text-[11px] text-[var(--sub)] mt-0.5">
+                      Updates, billing alerts and marketing emails
+                    </small>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <span className="text-[10px] font-semibold text-[var(--muted)] border border-[var(--border)] bg-[var(--surface-raised)] px-2 py-0.5 rounded-md">
+                    Not editable yet
+                  </span>
+                  <ChevronDown className="w-4 h-4 text-[var(--muted)] group-open:rotate-180 transition-transform" />
+                </div>
+              </summary>
+
+              <div className="px-5 pb-5 pt-2 text-xs text-[var(--sub)] leading-relaxed border-t border-[var(--border)] bg-[var(--surface-raised)]">
+                <p className="mb-2">
+                  Notification preference controls are planned but are not connected yet. This preview does not change what emails you receive.
+                </p>
+                <ul className="space-y-1 list-disc list-inside text-[var(--muted)]">
+                  <li>Product updates — not configurable</li>
+                  <li>Billing alerts — not configurable</li>
+                  <li>Marketing communications — not configurable</li>
+                </ul>
               </div>
+            </details>
+
+            {/* Plan and Billing Disclosure */}
+            <details className="group">
+              <summary className="p-4 sm:p-5 flex items-center justify-between gap-4 cursor-pointer hover:bg-[var(--surface-raised)] transition-colors list-none">
+                <div className="flex items-center gap-3.5">
+                  <div className="w-9 h-9 rounded-xl bg-[var(--surface-raised)] text-[var(--brand)] flex items-center justify-center shrink-0">
+                    <CreditCard className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <strong className="block text-xs sm:text-sm font-semibold text-[var(--text)]">
+                      Plan and billing
+                    </strong>
+                    <small className="block text-[11px] text-[var(--sub)] mt-0.5">
+                      Subscriptions and manual payment information
+                    </small>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <span className="text-[10px] font-semibold text-[var(--muted)] border border-[var(--border)] bg-[var(--surface-raised)] px-2 py-0.5 rounded-md">
+                    View only
+                  </span>
+                  <ChevronDown className="w-4 h-4 text-[var(--muted)] group-open:rotate-180 transition-transform" />
+                </div>
+              </summary>
+
+              <div className="px-5 pb-5 pt-2 text-xs text-[var(--sub)] leading-relaxed border-t border-[var(--border)] bg-[var(--surface-raised)]">
+                <p>
+                  Xtrinox currently uses manual payment and verification for supported subscriptions. Review available plans in the Marketplace; stored card management and automatic upgrades are not implemented here.
+                </p>
+              </div>
+            </details>
+          </div>
+        </section>
+      </div>
+
+      {/* Sign Out Modal */}
+      {signOutModalOpen && (
+        <div
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="w-full max-w-sm rounded-2xl border border-[var(--border-strong)] bg-[var(--surface)] p-6 shadow-2xl relative text-[var(--text)] animate-in zoom-in-95">
+            <h2 className="font-heading font-extrabold text-xl text-[var(--text)]">
+              Sign out of this browser?
+            </h2>
+            <p className="text-xs text-[var(--sub)] mt-2 mb-6 leading-relaxed">
+              You will be signed out on this device. Your active sessions on other devices will remain connected.
+            </p>
+
+            <div className="flex justify-end gap-2.5">
               <button
-                onClick={handleLogoutAll}
-                className="px-lg py-sm border border-error text-error rounded-lg text-label-md font-bold hover:bg-error-container transition-colors"
+                type="button"
+                onClick={() => setSignOutModalOpen(false)}
+                className="px-4 py-2 rounded-xl border border-[var(--border)] text-xs font-semibold text-[var(--text)] hover:bg-[var(--surface-raised)] transition-colors"
               >
-                Logout All
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setSignOutModalOpen(false);
+                  onSignOut();
+                  onNavigate('login');
+                }}
+                className="px-4 py-2 rounded-xl bg-[var(--danger)] hover:opacity-90 text-xs font-bold text-white shadow-md transition-colors"
+              >
+                Sign out
               </button>
             </div>
           </div>
         </div>
-      </section>
-
-      <hr className="border-outline-variant" />
-
-      {/* Section: Notifications */}
-      <section className="grid grid-cols-1 md:grid-cols-3 gap-xl">
-        <div className="md:col-span-1">
-          <h3 className="font-h2 text-on-surface">Notifications</h3>
-          <p className="text-body-md text-on-surface-variant mt-sm">Control how and when you receive communications from the platform.</p>
-        </div>
-        <div className="md:col-span-2 bg-white p-xl rounded-xl border border-surface-container-highest shadow-sm space-y-0">
-          <div className="flex items-center justify-between py-md">
-            <div>
-              <p className="font-h3 text-on-surface">Product Updates</p>
-              <p className="text-body-md text-on-surface-variant">Get notified about new features and ecosystem releases.</p>
-            </div>
-            <Toggle enabled={wantsProductUpdates} onChange={() => setWantsProductUpdates(!wantsProductUpdates)} />
-          </div>
-          <div className="flex items-center justify-between py-md border-t border-surface-container-highest">
-            <div>
-              <p className="font-h3 text-on-surface">Billing Alerts</p>
-              <p className="text-body-md text-on-surface-variant">Monthly invoices and payment confirmation summaries.</p>
-            </div>
-            <Toggle enabled={wantsBillingAlerts} onChange={() => setWantsBillingAlerts(!wantsBillingAlerts)} />
-          </div>
-          <div className="flex items-center justify-between py-md border-t border-surface-container-highest">
-            <div>
-              <p className="font-h3 text-on-surface">Marketing Communications</p>
-              <p className="text-body-md text-on-surface-variant">Occasional newsletters and partner marketplace offers.</p>
-            </div>
-            <Toggle enabled={wantsMarketingAlerts} onChange={() => setWantsMarketingAlerts(!wantsMarketingAlerts)} />
-          </div>
-        </div>
-      </section>
-
-      <hr className="border-outline-variant" />
-
-      {/* Section: Billing (Preview) */}
-      <section className="grid grid-cols-1 md:grid-cols-3 gap-xl">
-        <div className="md:col-span-1">
-          <h3 className="font-h2 text-on-surface">Billing Preferences</h3>
-          <p className="text-body-md text-on-surface-variant mt-sm">Manage your payment methods, subscription tiers, and tax information.</p>
-        </div>
-        <div className="md:col-span-2 space-y-md">
-          {/* Plan Card */}
-          <div className="bg-primary text-on-primary p-xl rounded-xl shadow-sm flex justify-between items-center">
-            <div>
-              <p className="text-label-md opacity-80 mb-xs">Current Plan</p>
-              <p className="font-h1">Premium</p>
-              <p className="text-body-md mt-sm">Managed by organization administrator</p>
-            </div>
-            <button className="px-md py-sm bg-white text-primary rounded-lg text-label-md font-bold">
-              Upgrade Plan
-            </button>
-          </div>
-
-          {/* Payment Method */}
-          <div className="bg-white p-xl rounded-xl border border-surface-container-highest shadow-sm">
-            <div className="flex items-center justify-between mb-lg">
-              <p className="font-h3 text-on-surface">Payment Method</p>
-              <button className="text-primary text-label-md font-bold">Add New</button>
-            </div>
-            <div className="flex items-center gap-md p-md border border-outline-variant rounded-lg">
-              <div className="w-12 h-8 bg-surface-container-high rounded flex items-center justify-center font-bold text-[10px] text-on-surface-variant uppercase">
-                Visa
-              </div>
-              <div className="flex-grow">
-                <p className="text-label-md text-on-surface font-bold">Visa ending in ••4242</p>
-                <p className="text-[11px] text-on-surface-variant">Expires 12/2026</p>
-              </div>
-              <span className="material-symbols-outlined text-primary">check_circle</span>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Save / Cancel */}
-      <div className="pt-xl flex justify-end gap-md pb-xl">
-        <button className="px-xl py-md border border-outline-variant rounded-lg text-label-md text-on-surface hover:bg-surface-container-low transition-colors">
-          Cancel Changes
-        </button>
-        <button className="px-xl py-md bg-primary text-on-primary rounded-lg text-label-md font-bold shadow-sm active:scale-95 transition-transform">
-          Update Settings
-        </button>
-      </div>
+      )}
     </div>
   );
 };

@@ -1,3 +1,5 @@
+declare const chrome: any;
+
 export type ExtensionStatus = 'disconnected' | 'connected' | 'conflict';
 
 export interface ExtensionMessage {
@@ -38,7 +40,8 @@ class ExtensionService {
       if (this.onPongCallback) {
         let status: ExtensionStatus = 'connected';
         if (message.status === 'conflict') status = 'conflict';
-        if (message.status === 'disconnected') status = 'disconnected';
+        else if (message.status === 'unavailable' || message.status === 'disconnected') status = 'disconnected';
+        else if (message.status === 'ok' || message.status === 'connected') status = 'connected';
         
         this.onPongCallback({
           version: message.version,
@@ -85,7 +88,7 @@ class ExtensionService {
         chrome.runtime.sendMessage(
           EXTENSION_ID,
           { action: 'syncBridge', payload, key },
-          (response) => {
+          (response: any) => {
             if (chrome.runtime.lastError) {
               reject(new Error('Extension not reachable.'));
               return;

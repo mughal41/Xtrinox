@@ -1,17 +1,17 @@
 import { create } from 'zustand';
 import { firestoreService } from '../services/firestore.service';
-import { migrationService } from '../services/migration.service';
-import { Subscription, Entitlement } from '../firebase/schema';
+import { Subscription, Entitlement, UserProfileDocument } from '../firebase/schema';
 
 interface SubscriptionState {
   subscriptions: Subscription[];
   entitlements: Entitlement[];
-  userDoc: any | null;
+  userDoc: UserProfileDocument | null;
   loading: boolean;
   error: string | null;
 
   fetchSubscriptions: (userId: string) => Promise<void>;
   isSubscribed: (toolId: string) => boolean;
+  getEntitlementForTool: (toolId: string) => Entitlement | undefined;
   clear: () => void;
 }
 
@@ -31,38 +31,59 @@ export const useSubscriptionStore = create<SubscriptionState>((set, get) => ({
         firestoreService.getUserDoc(userId)
       ]);
 
-      // AUTO-MIGRATION LOGIC
-      const hasModernEntitlement = ents.some(e => e.toolId === 'chatgpt-premium');
-      const hasLegacyData = !!(userDoc?.encryptedPayload) || subs.some(s => s.toolId === 'chatgpt-premium');
-
-      if (hasLegacyData && !hasModernEntitlement) {
-        // Trigger synchronous migration
-        await migrationService.migrateLegacyUser(userId, 'chatgpt-premium');
-        // Re-fetch once migrated so the UI updates
-        const newEnts = await firestoreService.getEntitlements(userId);
-        set({ entitlements: newEnts, subscriptions: subs, userDoc, loading: false });
-      } else {
-        set({ subscriptions: subs, entitlements: ents, userDoc, loading: false });
-      }
+      set({ subscriptions: subs, entitlements: ents, userDoc, loading: false });
     } catch (err: any) {
-      set({ loading: false, error: err.message });
+      set({ loading: false, error: err.message || 'Failed to fetch subscriptions' });
     }
+  },
+
+  getEntitlementForTool: (toolId: string) => {
+    const { entitlements } = get();
+    return entitlements.find(e => e.toolId === toolId || e.toolId.toLowerCase().includes(toolId.toLowerCase()));
   },
 
   isSubscribed: (toolId: string) => {
     const { subscriptions, entitlements, userDoc } = get();
+    const normalizedToolId = toolId.toLowerCase();
     
     // Check subscriptions collection (purchases)
-    const hasActiveSub = subscriptions.some(sub => sub.toolId === toolId && sub.status === 'active');
+    const hasActiveSub = subscriptions.some(sub => 
+      (sub.toolId === toolId || sub.toolId.toLowerCase().includes(normalizedToolId) || normalizedToolId.includes(sub.toolId.toLowerCase())) && 
+      sub.status === 'active'
+    );
+    if (hasActiveSub) return true;
     
-    // Check entitlements collection (permissions)
-    const hasActiveEnt = entitlements.some(ent => ent.toolId === toolId && ent.launchAllowed);
+    // Check entitlements collection with expiration check
+    const ent = entitlements.find(e => 
+      e.toolId === toolId || 
+      e.toolId.toLowerCase().includes(normalizedToolId) || 
+      normalizedToolId.includes(e.toolId.toLowerCase())
+    );
+
+    if (ent && ent.launchAllowed) {
+      let expiresAtDate: Date | null = null;
+      if (ent.expiresAt?.toDate) {
+        expiresAtDate = ent.expiresAt.toDate();
+      } else if (ent.expiresAt) {
+        expiresAtDate = new Date(ent.expiresAt);
+      }
+      
+      if (!expiresAtDate || expiresAtDate > new Date()) {
+        return true;
+      }
+    }
     
-    // Legacy Check: if tool is ChatGPT and user has an encrypted payload
-    const isChatGPT = toolId.toLowerCase().includes('chatgpt');
+    // Legacy Check: if tool is ChatGPT and user has an active legacy encrypted payload
+    const isChatGPT = normalizedToolId.includes('chatgpt');
     const hasLegacyPayload = isChatGPT && userDoc?.encryptedPayload;
+    if (hasLegacyPayload) return true;
+
+    // Check if activeToolId on user document matches
+    if (userDoc?.activeToolId && (userDoc.activeToolId === toolId || userDoc.activeToolId.toLowerCase().includes(normalizedToolId))) {
+      return true;
+    }
     
-    return hasActiveSub || hasActiveEnt || !!hasLegacyPayload;
+    return false;
   },
 
   clear: () => set({ subscriptions: [], entitlements: [], userDoc: null, loading: false, error: null })

@@ -7,10 +7,8 @@ import {
   updateDoc, 
   query, 
   where, 
-  Timestamp,
-  writeBatch,
-  serverTimestamp,
-  addDoc
+  serverTimestamp, 
+  addDoc 
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { 
@@ -20,8 +18,9 @@ import {
   WorkspaceApp, 
   Device,
   RuntimeStateRecord,
-  Notification
-} from './schema';
+  Notification,
+  UserProfileDocument
+} from '../firebase/schema';
 
 class FirestoreService {
   /**
@@ -30,6 +29,11 @@ class FirestoreService {
   async getMarketplaceTools(): Promise<MarketplaceTool[]> {
     const snap = await getDocs(query(collection(db, 'marketplace_tools'), where('active', '==', true)));
     return snap.docs.map(d => ({ id: d.id, ...d.data() } as MarketplaceTool));
+  }
+
+  async getMarketplaceToolById(toolId: string): Promise<MarketplaceTool | null> {
+    const snap = await getDoc(doc(db, 'marketplace_tools', toolId));
+    return snap.exists() ? ({ id: snap.id, ...snap.data() } as MarketplaceTool) : null;
   }
 
   /**
@@ -44,16 +48,14 @@ class FirestoreService {
     const legacyDoc = await getDoc(doc(db, 'subscriptions', userId));
     if (legacyDoc.exists()) {
       const data = legacyDoc.data();
-      // Convert legacy map to Subscription objects if needed
-      // If legacy doc has 'chatgpt: true', we map it
-      if (data.chatgpt) {
+      if (data?.chatgpt) {
         subs.push({
           toolId: 'chatgpt-premium',
           status: 'active',
           userId: userId
         } as any);
       }
-      if (data.synthetix) {
+      if (data?.synthetix) {
         subs.push({
           toolId: 'synthetix-pro',
           status: 'active',
@@ -70,9 +72,20 @@ class FirestoreService {
     return snap.docs.map(d => d.data() as Entitlement);
   }
 
-  async getUserDoc(userId: string): Promise<any> {
+  async getUserDoc(userId: string): Promise<UserProfileDocument | null> {
     const snap = await getDoc(doc(db, 'users', userId));
-    return snap.exists() ? snap.data() : null;
+    return snap.exists() ? (snap.data() as UserProfileDocument) : null;
+  }
+
+  async updateUserProfile(
+    userId: string, 
+    data: { displayName?: string; bio?: string; notificationPreferences?: any }
+  ) {
+    const ref = doc(db, 'users', userId);
+    await setDoc(ref, {
+      ...data,
+      updatedAt: serverTimestamp()
+    }, { merge: true });
   }
 
   /**
@@ -102,10 +115,13 @@ class FirestoreService {
   async getDevices(userId: string): Promise<Device[]> {
     const q = query(collection(db, 'devices'), where('userId', '==', userId));
     const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => doc.data() as Device);
+    return snapshot.docs.map(d => d.data() as Device);
   }
 
-  async registerOrUpdateDevice(userId: string, deviceInfo: Omit<Device, 'userId' | 'trusted' | 'blocked' | 'blockedBy' | 'blockedAt' | 'createdAt' | 'lastActiveAt'>) {
+  async registerOrUpdateDevice(
+    userId: string, 
+    deviceInfo: Omit<Device, 'userId' | 'trusted' | 'blocked' | 'blockedBy' | 'blockedAt' | 'createdAt' | 'lastActiveAt'>
+  ) {
     const ref = doc(db, 'devices', `${userId}_${deviceInfo.deviceId}`);
     
     // Use merge:true to update existing or create new without overwriting block status
@@ -115,8 +131,7 @@ class FirestoreService {
       lastActiveAt: serverTimestamp(),
     }, { merge: true });
 
-    // For truly new devices, initialize trusted/blocked fields
-    // (This is a simplified approach; in production you might read first or use a transaction)
+    // Initialize fields if new
     const snap = await getDoc(ref);
     if (!snap.data()?.createdAt) {
       await updateDoc(ref, {
@@ -149,7 +164,11 @@ class FirestoreService {
     });
 
     // Reset user-level flag if no other devices have requests
-    const q = query(collection(db, 'devices'), where('userId', '==', userId), where('unblockRequested', '==', true));
+    const q = query(
+      collection(db, 'devices'), 
+      where('userId', '==', userId), 
+      where('unblockRequested', '==', true)
+    );
     const snap = await getDocs(q);
     if (snap.empty) {
       await updateDoc(doc(db, 'users', userId), {
@@ -171,12 +190,11 @@ class FirestoreService {
     });
   }
 
-  async isDeviceBlocked(deviceId: string): Promise<boolean> {
+  async isDeviceBlocked(userId: string, deviceId: string): Promise<boolean> {
     try {
-      const q = query(collection(db, 'devices'), where('deviceId', '==', deviceId), where('blocked', '==', true));
-      const snapshot = await getDocs(q);
-      return !snapshot.empty;
-    } catch (e) {
+      const snapshot = await getDoc(doc(db, 'devices', `${userId}_${deviceId}`));
+      return snapshot.exists() && snapshot.data()?.blocked === true;
+    } catch {
       return false;
     }
   }
@@ -184,7 +202,13 @@ class FirestoreService {
   /**
    * ANALYTICS / LOGS
    */
-  async logLaunch(userId: string, toolId: string, status: 'success' | 'failed', version: string, deviceId: string) {
+  async logLaunch(
+    userId: string, 
+    toolId: string, 
+    status: 'success' | 'failed', 
+    version: string, 
+    deviceId: string
+  ) {
     const ref = collection(db, 'launch_logs');
     await addDoc(ref, {
       userId,
@@ -202,7 +226,7 @@ class FirestoreService {
   async getNotifications(userId: string): Promise<Notification[]> {
     const snap = await getDocs(query(
       collection(db, 'notifications'), 
-      where('userId', '==', userId),
+      where('userId', '==', userId), 
       where('read', '==', false)
     ));
     return snap.docs.map(d => ({ id: d.id, ...d.data() } as Notification));

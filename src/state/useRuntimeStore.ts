@@ -12,7 +12,7 @@ interface RuntimeState {
   deviceBlocked: boolean;
   currentDeviceId: string | null;
   adminDataLoading: boolean;
-  // Additional UI states
+  syncError: string | null;
   launchingToolName: string | null;
   isUpdating: boolean;
   updateProgress: number;
@@ -32,10 +32,10 @@ interface RuntimeState {
   setUpdateProgress: (progress: number) => void;
   
   // Handlers
-  initialize: () => void;
+  initialize: () => () => void;
 }
 
-export const useRuntimeStore = create<RuntimeState>((set, get) => ({
+export const useRuntimeStore = create<RuntimeState>((set) => ({
   extensionStatus: 'unknown',
   extensionVersion: null,
   latestVersion: null,
@@ -69,29 +69,31 @@ export const useRuntimeStore = create<RuntimeState>((set, get) => ({
     extensionService.onPong(({ version, status }) => {
       lastPongTime = Date.now();
       set({ 
-        bridgeConnected: true,
+        bridgeConnected: status === 'connected',
         extensionVersion: version || null,
         extensionStatus: status || 'connected'
       });
     });
 
-    // Start pinging
+    // Start pinging immediately
     extensionService.ping();
-    const interval = setInterval(() => {
-      extensionService.ping();
-      
-      // If we haven't heard from the extension in 5 seconds, it's disconnected
-      if (lastPongTime > 0 && Date.now() - lastPongTime > 6000) {
-        set({ bridgeConnected: false, extensionStatus: 'disconnected' });
-      }
-    }, 4000);
 
-    // Initial check for non-installed extension
-    setTimeout(() => {
+    // Fast initial check for non-installed extension (1.2s instead of 5s)
+    const initialCheck = setTimeout(() => {
       if (lastPongTime === 0) {
         set({ bridgeConnected: false, extensionStatus: 'disconnected' });
       }
-    }, 5000);
+    }, 1200);
+
+    // Responsive heartbeat interval (every 2s, timeout after 3.5s)
+    const interval = setInterval(() => {
+      extensionService.ping();
+      
+      // If we haven't heard from the extension in 3.5 seconds, it's disconnected
+      if (lastPongTime > 0 && Date.now() - lastPongTime > 3500) {
+        set({ bridgeConnected: false, extensionStatus: 'disconnected' });
+      }
+    }, 2000);
 
     // Fetch latest version
     const fetchVersion = async () => {
@@ -101,7 +103,7 @@ export const useRuntimeStore = create<RuntimeState>((set, get) => ({
           const data = await response.json();
           if (data.version) set({ latestVersion: data.version });
         }
-      } catch (e) {
+      } catch {
         // Version checks are non-critical.
       }
     };
@@ -109,6 +111,7 @@ export const useRuntimeStore = create<RuntimeState>((set, get) => ({
     const versionInterval = setInterval(fetchVersion, 30000);
 
     return () => {
+      clearTimeout(initialCheck);
       clearInterval(interval);
       clearInterval(versionInterval);
     };
