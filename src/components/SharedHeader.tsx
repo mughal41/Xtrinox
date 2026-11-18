@@ -117,19 +117,19 @@ export const SharedHeader: React.FC<SharedHeaderProps> = ({
 
   return (
     <header className="h-[72px] bg-[var(--header)] border-b border-[var(--header-border)] sticky top-0 z-40 transition-colors shadow-xs">
-      <div className="max-w-[1280px] h-full mx-auto px-6 flex items-center justify-between gap-6">
+      <div className="max-w-[1280px] h-full mx-auto px-4 sm:px-6 flex items-center justify-between gap-3 sm:gap-6">
         {/* Left: Brand Logo & Nav */}
-        <div className="flex items-center gap-8">
+        <div className="flex items-center gap-4 lg:gap-8 min-w-0">
           <button
             onClick={() => onNavigate('marketplace')}
-            className="flex items-center text-left hover:opacity-90 transition-opacity cursor-pointer"
+            className="flex items-center text-left hover:opacity-90 transition-opacity cursor-pointer shrink-0"
             aria-label="Xtrinox Home"
           >
             <BrandLogo size="md" />
           </button>
 
-          {/* Desktop Nav Links */}
-          <nav className="hidden md:flex items-center gap-1" aria-label="Primary navigation">
+          {/* Desktop Nav Links (Visible on >= lg: 1024px) */}
+          <nav className="hidden lg:flex items-center gap-1" aria-label="Primary navigation">
             <button
               onClick={() => onNavigate('marketplace')}
               className={`px-3 py-2 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
@@ -174,8 +174,8 @@ export const SharedHeader: React.FC<SharedHeaderProps> = ({
         </div>
 
         {/* Right Section */}
-        <div className="flex items-center gap-2.5 sm:gap-3">
-          {/* Bridge connection pill with clear status & interactive tooltip */}
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          {/* Bridge connection pill with responsive sizing */}
           <button
             type="button"
             onClick={() => {
@@ -183,7 +183,7 @@ export const SharedHeader: React.FC<SharedHeaderProps> = ({
                 onNavigate('workspace');
               }
             }}
-            className={`hidden sm:inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-medium transition-all shadow-2xs cursor-pointer group ${
+            className={`hidden md:inline-flex items-center gap-1.5 lg:gap-2 px-2.5 lg:px-3 py-1.5 rounded-full border text-xs font-medium transition-all shadow-2xs cursor-pointer group shrink-0 ${
               isConnected
                 ? 'border-emerald-600/30 bg-emerald-500/10 text-emerald-800 hover:bg-emerald-500/20'
                 : isConflict
@@ -212,11 +212,14 @@ export const SharedHeader: React.FC<SharedHeaderProps> = ({
                 }`}
               />
             </span>
-            <span className="font-semibold text-xs tracking-tight">
+            <span className="font-semibold text-xs tracking-tight hidden xl:inline">
               {isConnected ? 'Bridge Ready' : isConflict ? 'Bridge Warning' : 'Extension Offline'}
             </span>
+            <span className="font-semibold text-xs tracking-tight xl:hidden">
+              {isConnected ? 'Ready' : isConflict ? 'Warning' : 'Offline'}
+            </span>
             {!isConnected && (
-              <span className="text-[10px] text-[var(--muted)] font-normal border-l border-[var(--border)] pl-1.5 group-hover:text-[var(--text)] transition-colors">
+              <span className="text-[10px] text-[var(--muted)] font-normal border-l border-[var(--border)] pl-1.5 hidden xl:inline group-hover:text-[var(--text)] transition-colors">
                 Setup
               </span>
             )}
@@ -227,26 +230,26 @@ export const SharedHeader: React.FC<SharedHeaderProps> = ({
             <button
               type="button"
               onClick={() => onNavigate('admin/dashboard')}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-[#0B0B0C] bg-[#0B0B0C] hover:bg-[#232326] text-[#F3F2EE] text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95"
+              className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full border border-[#0B0B0C] bg-[#0B0B0C] hover:bg-[#232326] text-[#F3F2EE] text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95 shrink-0"
               title="Open Xtrinox Administrative Portal"
             >
-              <span className="w-1.5 h-1.5 rounded-full bg-[#B6FF2E] animate-pulse" />
+              <span className="w-1.5 h-1.5 rounded-full bg-[#B6FF2E] animate-pulse shrink-0" />
               <span>Admin</span>
             </button>
           )}
 
           {/* User Profile Area: Shows "Sign in" for guests, or interactive Dropdown for logged-in users */}
           {authUser ? (
-            <div className="relative sm:w-[220px]" ref={userMenuRef}>
+            <div className="relative shrink-0" ref={userMenuRef}>
               <button
                 type="button"
                 onClick={() => setUserMenuOpen(!userMenuOpen)}
-                className="w-full flex items-center justify-between gap-2.5 px-3 py-1.5 rounded-full border border-[var(--border)] hover:border-[var(--border-strong)] bg-[var(--surface)] hover:bg-[var(--surface-raised)] transition-all cursor-pointer shadow-2xs group"
+                className="flex items-center justify-between gap-2 px-2.5 sm:px-3 py-1.5 rounded-full border border-[var(--border)] hover:border-[var(--border-strong)] bg-[var(--surface)] hover:bg-[var(--surface-raised)] transition-all cursor-pointer shadow-2xs group max-w-[150px] sm:max-w-[190px] md:max-w-[210px]"
                 aria-expanded={userMenuOpen}
                 aria-haspopup="menu"
                 aria-label="User account menu"
               >
-                <div className="flex items-center gap-2.5 min-w-0">
+                <div className="flex items-center gap-2 min-w-0">
                   {/* Avatar circle on left */}
                   <div
                     className="w-7 h-7 rounded-full font-bold text-xs flex items-center justify-center shadow-xs shrink-0 bg-[#0B0B0C] text-[#F3F2EE] border border-[#0B0B0C]"
@@ -256,11 +259,11 @@ export const SharedHeader: React.FC<SharedHeaderProps> = ({
 
                   {/* Vertically stacked user name and role */}
                   <div className="hidden sm:flex flex-col text-left leading-tight min-w-0">
-                    <span className="text-xs font-bold text-[var(--text)] truncate block">
+                    <span className="text-xs font-bold text-[var(--text)] truncate block max-w-[85px] sm:max-w-[105px]">
                       {displayName}
                     </span>
                     <span className="text-[10px] text-[var(--muted)] font-medium truncate block">
-                      {isAdmin ? 'Administrator' : 'Verified Member'}
+                      {isAdmin ? 'Admin' : 'Member'}
                     </span>
                   </div>
                 </div>
@@ -275,7 +278,7 @@ export const SharedHeader: React.FC<SharedHeaderProps> = ({
               {/* User Dropdown Menu */}
               {userMenuOpen && (
                 <div
-                  className="absolute left-0 right-0 top-full mt-1.5 w-full rounded-2xl bg-[var(--surface)] border border-[var(--border)] p-1.5 shadow-lg z-50 flex flex-col gap-0.5 animate-in fade-in-50 zoom-in-95 origin-top"
+                  className="absolute right-0 top-full mt-1.5 w-60 rounded-2xl bg-[var(--surface)] border border-[var(--border)] p-1.5 shadow-xl z-50 flex flex-col gap-0.5 animate-in fade-in-50 zoom-in-95 origin-top-right"
                   role="menu"
                 >
                   {/* Account Header */}
@@ -378,17 +381,17 @@ export const SharedHeader: React.FC<SharedHeaderProps> = ({
             <button
               type="button"
               onClick={() => onNavigate('login')}
-              className="h-9 px-4 rounded-full bg-[var(--brand)] hover:bg-[var(--brand-hover)] text-[var(--brand-text)] text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95 flex items-center gap-1.5"
+              className="h-9 px-4 rounded-full bg-[var(--brand)] hover:bg-[var(--brand-hover)] text-[var(--brand-text)] text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95 flex items-center gap-1.5 shrink-0"
             >
               <User className="w-3.5 h-3.5" />
               <span>Sign in</span>
             </button>
           )}
 
-          {/* Mobile menu toggle */}
+          {/* Mobile menu toggle (Visible on < lg: 1024px) */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden p-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] text-[var(--text)] cursor-pointer"
+            className="lg:hidden p-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-raised)] text-[var(--text)] transition-colors cursor-pointer shrink-0"
             aria-label="Toggle navigation"
             aria-expanded={mobileMenuOpen}
           >
@@ -397,16 +400,16 @@ export const SharedHeader: React.FC<SharedHeaderProps> = ({
         </div>
       </div>
 
-      {/* Mobile Drawer */}
+      {/* Mobile Drawer (Visible on < lg: 1024px) */}
       {mobileMenuOpen && (
-        <div className="md:hidden bg-[var(--surface)] border-b border-[var(--border)] px-6 py-4 shadow-xl animate-in slide-in-from-top-2">
+        <div className="lg:hidden bg-[var(--surface)] border-b border-[var(--border)] px-4 sm:px-6 py-4 shadow-xl animate-in slide-in-from-top-2">
           <nav className="flex flex-col gap-2">
             {authUser && (
               <div className="flex items-center gap-3 p-3 rounded-xl bg-[var(--surface-raised)] border border-[var(--border)] mb-1">
                 <div className="w-9 h-9 rounded-full bg-[#0B0B0C] text-[#F3F2EE] text-xs font-bold flex items-center justify-center shrink-0">
                   {initial}
                 </div>
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <span className="text-xs font-bold text-[var(--text)] block truncate">
                     {displayName}
                   </span>
@@ -414,8 +417,46 @@ export const SharedHeader: React.FC<SharedHeaderProps> = ({
                     {authUser.email}
                   </span>
                 </div>
+                {isAdmin && (
+                  <span className="text-[10px] font-bold text-emerald-700 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full shrink-0">
+                    Admin
+                  </span>
+                )}
               </div>
             )}
+
+            {/* Extension Bridge Status inside Mobile Drawer */}
+            <div className="p-3 rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] flex items-center justify-between text-xs">
+              <div className="flex items-center gap-2">
+                <span className="relative flex h-2 w-2 shrink-0">
+                  {isConnected && (
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75" />
+                  )}
+                  <span
+                    className={`relative inline-flex rounded-full h-2 w-2 ${
+                      isConnected
+                        ? 'bg-emerald-600'
+                        : isConflict
+                        ? 'bg-amber-500'
+                        : 'bg-rose-500'
+                    }`}
+                  />
+                </span>
+                <span className="font-semibold text-[var(--text)]">
+                  {isConnected ? 'Bridge Ready' : isConflict ? 'Bridge Warning' : 'Extension Offline'}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  onNavigate('workspace');
+                  setMobileMenuOpen(false);
+                }}
+                className="text-[11px] font-bold text-[var(--brand)] underline cursor-pointer"
+              >
+                Workspace
+              </button>
+            </div>
 
             <button
               onClick={() => {

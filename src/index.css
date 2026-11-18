@@ -732,19 +732,32 @@
 @media (max-width: 1200px) {
   .product-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .cover { height: 232px; }
-  .hero-stack { transform: scale(0.88); }
+  .hero-stack { transform: scale(0.88); transform-origin: center; }
 }
 @media (max-width: 800px) {
-  .hero-stack { height: 157px; transform: scale(0.74); transform-origin: center; }
+  .hero-stack { height: 160px; transform: scale(0.75); transform-origin: center; max-width: 100%; }
   .product-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 560px) {
-  .hero-stack { height: 124px; transform: scale(0.62); margin-top: -6px; }
+  .hero-stack { height: 135px; transform: scale(0.62); transform-origin: center; margin-top: 0; max-width: 100%; }
   .product-grid { grid-template-columns: 1fr; gap: 12px; }
   .cover { height: 218px; }
   .cover-title { font-size: 23px; }
   .card-description { min-height: 0; }
   .card-content { min-height: 164px; }
+}
+@media (max-width: 400px) {
+  .hero-stack { height: 120px; transform: scale(0.52); transform-origin: center; max-width: 100%; }
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+/* Hide scrollbar for IE, Edge and Firefox */
+.no-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
 }
 
 @keyframes indeterminate {

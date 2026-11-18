@@ -317,11 +317,11 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 w-full sm:w-auto">
             <button
               type="button"
               onClick={() => setAndroidModalOpen(true)}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-raised)] text-[var(--text)] text-xs font-semibold shadow-xs transition-colors"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-raised)] text-[var(--text)] text-xs font-semibold shadow-xs transition-colors"
             >
               <Smartphone className="w-4 h-4 text-[var(--brand)]" />
               <span>Get Android app</span>
@@ -330,7 +330,7 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({
         </div>
 
         {/* Tools Bar */}
-        <div className="border-b border-[var(--border)] pb-3.5 mb-6 flex items-center justify-between">
+        <div className="border-b border-[var(--border)] pb-3.5 mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-baseline gap-3">
             <h2 className="font-heading font-bold text-base text-[var(--text)]">Your tools</h2>
             <span className="text-xs text-[var(--muted)]">
@@ -338,7 +338,7 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({
             </span>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center justify-between sm:justify-end gap-3 flex-wrap">
             <button
               type="button"
               onClick={() => {

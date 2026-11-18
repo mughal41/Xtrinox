@@ -271,17 +271,17 @@ export const MarketplacePage: React.FC<MarketplacePageProps> = ({ onNavigate }) 
               Discover and subscribe to leading AI tools for writing, research, development, and productivity—managed in one place.
             </p>
 
-            <div className="flex flex-wrap items-center gap-3">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
               <a
                 href="#catalog"
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[var(--brand)] hover:bg-[var(--brand-hover)] text-[var(--brand-text)] font-bold text-xs shadow-md hover:shadow-lg transition-all"
+                className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-[var(--brand)] hover:bg-[var(--brand-hover)] text-[var(--brand-text)] font-bold text-xs shadow-md hover:shadow-lg transition-all w-full sm:w-auto"
               >
                 <Layers className="w-4 h-4" />
                 <span>Browse AI tools</span>
               </a>
               <a
                 href="#how-it-works"
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-[var(--border-strong)] bg-[var(--surface)] hover:bg-[var(--surface-deep)] text-[var(--text)] font-semibold text-xs transition-colors"
+                className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl border border-[var(--border-strong)] bg-[var(--surface)] hover:bg-[var(--surface-deep)] text-[var(--text)] font-semibold text-xs transition-colors w-full sm:w-auto"
               >
                 <span>How it works</span>
                 <ArrowRight className="w-3.5 h-3.5" />
@@ -306,7 +306,7 @@ export const MarketplacePage: React.FC<MarketplacePageProps> = ({ onNavigate }) 
           </div>
 
           {/* Right Hero Stacked Deck Showcase */}
-          <div className="lg:col-span-5 relative flex items-center justify-center py-6">
+          <div className="lg:col-span-5 relative flex items-center justify-center py-6 overflow-hidden sm:overflow-visible max-w-full">
             <div className="hero-stack" role="region" aria-label="Featured AI tools deck">
               <div
                 role="button"
@@ -434,7 +434,7 @@ export const MarketplacePage: React.FC<MarketplacePageProps> = ({ onNavigate }) 
         {/* Categories & Sorting Row */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 mt-4">
           {/* Category Filter Pills (Functional Buttons) */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 pr-6 scroll-smooth" role="group" aria-label="Filter AI tools">
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar scroll-smooth py-1 px-1 -mx-1" role="group" aria-label="Filter AI tools">
             <button
               type="button"
               onClick={() => setSelectedCategory('all')}

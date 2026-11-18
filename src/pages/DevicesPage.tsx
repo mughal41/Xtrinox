@@ -202,7 +202,7 @@ export const DevicesPage: React.FC<DevicesPageProps> = () => {
         {/* Tools Bar: Filter Tabs & Search */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 mb-4">
           {/* Tabs */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1" role="group" aria-label="Filter by status">
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar scroll-smooth pb-1" role="group" aria-label="Filter by status">
             {[
               { id: 'all', label: 'All devices' },
               { id: 'trusted', label: 'Trusted' },
