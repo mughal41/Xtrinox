@@ -26,6 +26,13 @@ exports.setUserStatus = functions.https.onCall(async (data, context) => {
   try {
     await admin.auth().updateUser(uid, { disabled });
     
+    // Keep Firestore users doc in sync
+    await admin.firestore().collection('users').doc(uid).set({
+      disabled,
+      status: disabled ? 'suspended' : 'operational',
+      updatedAt: admin.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+
     // Log the action
     await admin.firestore().collection('admin_audit_logs').add({
       adminUid: context.auth.uid,
@@ -185,15 +192,17 @@ exports.listAdminUsers = functions.https.onCall(async (data, context) => {
     
     const mergedUsers = listUsersResult.users.map(user => {
       const fsData = usersMap[user.uid] || {};
+      const isDisabled = Boolean(user.disabled || fsData.disabled || fsData.status === 'suspended');
       return {
         uid: user.uid,
         id: user.uid,
-        email: user.email,
-        displayName: user.displayName,
-        disabled: user.disabled,
+        email: user.email || fsData.email || '',
+        displayName: user.displayName || fsData.displayName || '',
         createdAt: user.metadata.creationTime,
         lastSignInTime: user.metadata.lastSignInTime,
-        ...fsData
+        ...fsData,
+        disabled: isDisabled,
+        status: isDisabled ? 'suspended' : (fsData.hasPendingUnblockRequest ? 'restoration_requested' : (fsData.status || 'operational'))
       };
     });
     

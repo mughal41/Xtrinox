@@ -270,7 +270,7 @@ export const AdminUsersPage: React.FC = () => {
                   : 'bg-[#FAF9F5] border border-[#E4E3DD] text-[#52525B] hover:text-[#0B0B0C]'
               }`}
             >
-              All Users
+              All Users ({users.length})
             </button>
             <button
               type="button"
@@ -281,7 +281,7 @@ export const AdminUsersPage: React.FC = () => {
                   : 'bg-[#FAF9F5] border border-[#E4E3DD] text-[#52525B] hover:text-[#0B0B0C]'
               }`}
             >
-              Operational
+              Operational ({users.filter((u) => u.status === 'operational').length})
             </button>
             <button
               type="button"
@@ -293,7 +293,7 @@ export const AdminUsersPage: React.FC = () => {
               }`}
             >
               <AlertTriangle className="w-3.5 h-3.5" />
-              <span>Restoration Requested</span>
+              <span>Restoration Requested ({users.filter((u) => u.status === 'restoration_requested').length})</span>
             </button>
             <button
               type="button"
@@ -304,7 +304,7 @@ export const AdminUsersPage: React.FC = () => {
                   : 'bg-[#FAF9F5] border border-[#E4E3DD] text-[#52525B] hover:text-[#0B0B0C]'
               }`}
             >
-              Suspended
+              Suspended ({users.filter((u) => u.status === 'suspended').length})
             </button>
           </div>
         }
@@ -385,9 +385,7 @@ export const AdminUsersPage: React.FC = () => {
                         {u.uid}
                       </span>
                     </div>
-                    {!isRestoration && !isSuspended && (
-                      <StatusBadge status={u.status} size="sm" />
-                    )}
+                    <StatusBadge status={u.status} size="sm" />
                   </div>
 
                   {/* Badges / Metrics Strip */}

@@ -316,7 +316,8 @@ export const adminUserService = {
       try {
         const result = await listAdminUsersFn();
         return result.data as any[];
-      } catch {
+      } catch (err) {
+        console.warn('Cloud Functions listAdminUsers unavailable, using Firestore fallback:', err);
         cloudFunctionsAvailable = false;
       }
     }
@@ -324,18 +325,38 @@ export const adminUserService = {
     // Fallback for Spark Plan (Firestore-only)
     const q = collection(db, 'users');
     const snapshot = await getDocs(q);
-    return snapshot.docs.map(d => ({ id: d.id, uid: d.id, ...d.data() }));
+    return snapshot.docs.map(d => {
+      const data = d.data();
+      const isDisabled = Boolean(data.disabled === true || data.status === 'suspended');
+      return {
+        id: d.id,
+        uid: d.id,
+        ...data,
+        disabled: isDisabled,
+        status: isDisabled ? 'suspended' : (data.hasPendingUnblockRequest ? 'restoration_requested' : (data.status || 'operational'))
+      };
+    });
   },
 
   async setUserStatus(uid: string, disabled: boolean) {
-    if (!cloudFunctionsAvailable) {
-      throw new Error('Action failed: This feature requires Cloud Functions (Blaze Plan).');
+    // 1. Always update Firestore doc directly so state persists immediately
+    const userRef = doc(db, 'users', uid);
+    await setDoc(userRef, {
+      disabled,
+      status: disabled ? 'suspended' : 'operational',
+      updatedAt: serverTimestamp()
+    }, { merge: true });
+
+    // 2. Also try Cloud Functions to update Firebase Auth if available
+    if (cloudFunctionsAvailable) {
+      try {
+        await setUserStatusFn({ uid, disabled });
+      } catch (err) {
+        console.warn('Cloud Functions setUserStatus unavailable, using Firestore-only mode:', err);
+        cloudFunctionsAvailable = false;
+      }
     }
-    try {
-      return await setUserStatusFn({ uid, disabled });
-    } catch {
-      throw new Error('Action failed: This feature requires Cloud Functions (Blaze Plan).');
-    }
+    return { success: true };
   },
 
   async createUser(email: string, password: string) {

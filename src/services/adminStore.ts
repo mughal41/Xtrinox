@@ -5,7 +5,12 @@ import {
   AdminUser,
   AuditLogRecord,
   SystemSettingsState,
-  ToastItem
+  ToastItem,
+  UserSubscription,
+  UserDeviceRecord,
+  UserLaunchRecord,
+  UserAccountStatus,
+  DeviceTrustState
 } from '../types/admin';
 import { 
   collection, 
@@ -378,21 +383,142 @@ class AdminStore {
     });
   }
 
+  // Helper to format tool name
+  private formatToolName(toolId: string): string {
+    const match = this.tools.find(t => t.id === toolId);
+    if (match?.name) return match.name;
+    if (toolId === 'chatgpt-premium' || toolId === 'chatgpt') return 'ChatGPT Premium';
+    if (toolId === 'claud-ai') return 'Claude Ai';
+    if (toolId === 'quillbot-pro') return 'Quillbot Pro';
+    if (toolId === 'stealth-writer') return 'Stealth Writer';
+    if (toolId === 'turnitin-instructor') return 'Turnitin Instructor';
+    return toolId.replace(/[-_]/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase());
+  }
+
   // --- USER DIRECTORY ---
   public async loadUsers() {
     try {
-      const userList = await adminUserService.getAllUsers();
-      this.users = userList.map((u: any) => ({
-        uid: u.uid || u.id,
-        email: u.email || '',
-        status: u.disabled ? 'suspended' : (u.hasPendingUnblockRequest ? 'restoration_requested' : 'operational'),
-        role: u.admin ? 'Administrator' : 'Standard User',
-        createdAt: u.createdAt ? (typeof u.createdAt === 'string' ? u.createdAt : u.createdAt.toDate?.()?.toISOString?.()) : '',
-        lastLogin: u.lastSignInTime || '',
-        subscriptions: [],
-        launchHistory: [],
-        devices: []
-      }));
+      const [userList, entitlementsSnap, devicesSnap, launchSnap] = await Promise.all([
+        adminUserService.getAllUsers(),
+        getDocs(collection(db, 'entitlements')).catch(() => ({ docs: [] } as any)),
+        getDocs(collection(db, 'devices')).catch(() => ({ docs: [] } as any)),
+        getDocs(query(collection(db, 'launch_logs'), orderBy('launchedAt', 'desc'), limit(200))).catch(() => ({ docs: [] } as any))
+      ]);
+
+      // Group entitlements by userId
+      const entitlementsByUser: Record<string, any[]> = {};
+      entitlementsSnap.docs.forEach((d: any) => {
+        const data = d.data();
+        const userId = data.userId;
+        if (userId) {
+          if (!entitlementsByUser[userId]) entitlementsByUser[userId] = [];
+          entitlementsByUser[userId].push({ id: d.id, ...data });
+        }
+      });
+
+      // Group devices by userId
+      const devicesByUser: Record<string, any[]> = {};
+      devicesSnap.docs.forEach((d: any) => {
+        const data = d.data();
+        const userId = data.userId;
+        if (userId) {
+          if (!devicesByUser[userId]) devicesByUser[userId] = [];
+          devicesByUser[userId].push({ id: d.id, ...data });
+        }
+      });
+
+      // Group launch logs by userId
+      const launchesByUser: Record<string, any[]> = {};
+      launchSnap.docs.forEach((d: any) => {
+        const data = d.data();
+        const userId = data.userId;
+        if (userId) {
+          if (!launchesByUser[userId]) launchesByUser[userId] = [];
+          launchesByUser[userId].push({ id: d.id, ...data });
+        }
+      });
+
+      this.users = userList.map((u: any) => {
+        const uid = u.uid || u.id;
+        const userEnts = entitlementsByUser[uid] || [];
+        const userDevs = devicesByUser[uid] || [];
+        const userLaunches = launchesByUser[uid] || [];
+
+        // Build active subscriptions from entitlements
+        const subscriptions: UserSubscription[] = userEnts.map((ent: any) => {
+          const toolName = this.formatToolName(ent.toolId);
+          const isExpired = ent.expiresAt?.toDate ? ent.expiresAt.toDate() < new Date() : false;
+          const isActive = ent.launchAllowed !== false && !isExpired;
+          return {
+            id: ent.id,
+            toolId: ent.toolId,
+            toolName,
+            cookieSetId: ent.productCookieId || '',
+            cookieSetName: ent.productCookieTitle || (toolName + ' Session'),
+            expiresAt: ent.expiresAt?.toDate ? ent.expiresAt.toDate().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Permanent',
+            status: isActive ? 'active' : 'legacy',
+            assignedAt: ent.createdAt?.toDate ? ent.createdAt.toDate().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : ''
+          };
+        });
+
+        // Add legacy entitlement if present on user doc and not already in subscriptions list
+        if ((u.activeToolId || u.encryptedPayload) && !subscriptions.some(s => s.toolId === (u.activeToolId || 'chatgpt-premium'))) {
+          const legacyToolId = u.activeToolId || 'chatgpt-premium';
+          const toolName = this.formatToolName(legacyToolId);
+          subscriptions.push({
+            id: `${uid}_legacy_${legacyToolId}`,
+            toolId: legacyToolId,
+            toolName,
+            cookieSetId: u.activeProductCookieId || '',
+            cookieSetName: u.activeProductCookieTitle || (toolName + ' (Active Session)'),
+            expiresAt: 'Permanent',
+            status: 'active',
+            assignedAt: u.updatedAt?.toDate ? u.updatedAt.toDate().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Active'
+          });
+        }
+
+        // Build device records
+        const devices: UserDeviceRecord[] = userDevs.map((dev: any) => {
+          const devState: DeviceTrustState = dev.blocked
+            ? (dev.blockedBy === 'admin' ? 'blocked_by_admin' : 'blocked_by_user')
+            : (dev.hasPendingUnblockRequest ? 'restore_requested' : 'trusted');
+
+          return {
+            id: dev.deviceId || dev.id,
+            browser: dev.browser || 'Unknown Browser',
+            os: dev.os || 'Unknown OS',
+            ip: dev.ip || 'Unknown IP',
+            location: dev.location || 'Unknown Location',
+            lastActive: dev.lastActiveAt?.toDate ? dev.lastActiveAt.toDate().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Recently',
+            status: devState
+          };
+        });
+
+        // Build launch records
+        const launchHistory: UserLaunchRecord[] = userLaunches.map((l: any) => ({
+          id: l.id,
+          toolId: l.toolId || '',
+          toolName: this.formatToolName(l.toolId || ''),
+          timestamp: l.launchedAt?.toDate ? l.launchedAt.toDate().toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Recent',
+          status: l.launchStatus === 'success' ? 'success' : (l.launchStatus === 'failed' ? 'blocked' : 'warning')
+        }));
+
+        const isSuspended = u.disabled === true || u.status === 'suspended';
+        const isRestoration = !isSuspended && (u.hasPendingUnblockRequest === true || u.status === 'restoration_requested');
+        const status: UserAccountStatus = isSuspended ? 'suspended' : (isRestoration ? 'restoration_requested' : 'operational');
+
+        return {
+          uid,
+          email: u.email || '',
+          status,
+          role: u.admin ? 'Administrator' : 'Standard User',
+          createdAt: u.createdAt ? (typeof u.createdAt === 'string' ? u.createdAt : u.createdAt.toDate?.()?.toISOString?.()) : '',
+          lastLogin: u.lastSignInTime || u.lastLogin || '',
+          subscriptions,
+          launchHistory,
+          devices
+        };
+      });
       this.notify();
     } catch (e) {
       console.warn('Failed to load users:', e);
@@ -479,6 +605,8 @@ class AdminStore {
       }
     }
     await adminEntitlementService.grantAccessToUsers(userIds, toolId, durationDays, adminUid, cookieSet);
+    await this.loadUsers();
+    await this.loadCookieSets();
     this.addToast({
       type: 'success',
       title: 'Entitlement Granted',
@@ -489,6 +617,8 @@ class AdminStore {
   public async revokeAccess(userId: string, toolId: string) {
     const adminUid = auth.currentUser?.uid || 'admin';
     await adminEntitlementService.revokeAccess(userId, toolId, adminUid);
+    await this.loadUsers();
+    await this.loadCookieSets();
     this.addToast({
       type: 'success',
       title: 'Entitlement Revoked',
